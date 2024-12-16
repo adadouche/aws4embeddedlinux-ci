@@ -81,9 +81,9 @@ export class EmbeddedLinuxCodebuildProjectStack extends cdk.Stack {
       'NFS Mount Port'
     );
 
-    const sstateFS = this.addFileSystem('SState', props.vpc, projectSg);
-    const dlFS = this.addFileSystem('Downloads', props.vpc, projectSg);
-    const tmpFS = this.addFileSystem('Temp', props.vpc, projectSg);
+    // const sstateFS = this.addFileSystem('SState', props.vpc, projectSg);
+    // const dlFS = this.addFileSystem('Downloads', props.vpc, projectSg);
+    // const tmpFS = this.addFileSystem('Temp', props.vpc, projectSg);
 
     // let accessLoggingBucket: s3.IBucket;
 
@@ -125,21 +125,24 @@ export class EmbeddedLinuxCodebuildProjectStack extends cdk.Stack {
       vpc: props.vpc,
       securityGroups: [projectSg],
       fileSystemLocations: [
-        FileSystemLocation.efs({
-          identifier: 'tmp_dir',
-          location: tmpFS,
-          mountPoint: '/build-output',
-        }),
-        FileSystemLocation.efs({
-          identifier: 'sstate_cache',
-          location: sstateFS,
-          mountPoint: '/sstate-cache',
-        }),
-        FileSystemLocation.efs({
-          identifier: 'dl_dir',
-          location: dlFS,
-          mountPoint: '/downloads',
-        }),
+        // FileSystemLocation.efs({
+        //   identifier: 'tmp_dir',
+        //   location: tmpFS,
+        //   mountPoint: '/build-output',
+        // }),
+        // FileSystemLocation.efs({
+        //   identifier: 'sstate_cache',
+        //   location: sstateFS,
+        //   mountPoint: '/sstate-cache',
+        // }),
+        // FileSystemLocation.efs({
+        //   identifier: 'dl_dir',
+        //   location: dlFS,
+        //   mountPoint: '/downloads',
+        // }),
+        FileSystemLocation.efs(this.createFileSystem('Temp', props.vpc, projectSg, 'tmp_dir', '/build-output')),
+        FileSystemLocation.efs(this.createFileSystem('SState', props.vpc, projectSg, 'sstate_cache', '/sstate-cache')),
+        FileSystemLocation.efs(this.createFileSystem('Downloads', props.vpc, projectSg, 'dl_dir', '/downloads'))
       ],
       logging: {
         cloudWatch: {
@@ -219,6 +222,50 @@ def handler(event, context):
    * @returns The filesystem location URL.
    *
    */
+  private createFileSystem(
+    name: string,
+    vpc: IVpc,
+    securityGroup: ISecurityGroup,
+    identifier: string,
+    mountPoint: string
+  ): {
+    identifier: string,
+    location: string,
+    mountPoint: string,
+  } {
+    const fs = new efs.FileSystem(
+      this,
+      `EmbeddedLinuxPipeline${name}Filesystem`,
+      {
+        vpc,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }
+    );
+
+    fs.connections.allowFrom(securityGroup, Port.tcp(2049));
+    fs.addAccessPoint(identifier, {
+      createAcl: {
+        ownerGid: '1000',
+        ownerUid: '1000',
+        permissions: '755',
+      },
+      path: mountPoint, // Example mount point path
+      posixUser: {
+        gid: '1000',
+        uid: '1000',
+      },
+    });
+
+    const fsId = fs.fileSystemId;
+    const region = cdk.Stack.of(this).region;
+
+    return {
+      identifier: identifier,
+      location: `${fsId}.efs.${region}.amazonaws.com:/`,
+      mountPoint: mountPoint,
+    };
+  }
+
   private addFileSystem(
     name: string,
     vpc: IVpc,
@@ -254,6 +301,10 @@ def handler(event, context):
         'codebuild:ListRepositories',
         'codebuild:PersistOAuthToken',
         'codebuild:ImportSourceCredentials',
+        'elasticfilesystem:ClientMount',
+        'elasticfilesystem:ClientRootAccess',
+        'elasticfilesystem:ClientWrite',
+        'elasticfilesystem:DescribeMountTargets'
       ],
       resources: ['*'],
     });
