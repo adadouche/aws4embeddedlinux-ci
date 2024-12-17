@@ -22,7 +22,6 @@ import {
 import { IRepository } from 'aws-cdk-lib/aws-ecr';
 
 import {
-  ISecurityGroup,
   IVpc,
   Peer,
   Port,
@@ -60,6 +59,8 @@ export interface EmbeddedLinuxPipelineProps extends cdk.StackProps {
   readonly outputBucket?: s3.Bucket | VMImportBucket;
   /** Prefix for S3 object within bucket */
   readonly subDirectoryName?: string;
+  /** EFS Filesystem**/
+  readonly efsFileSystem?: efs.FileSystem;
 }
 
 /**
@@ -83,13 +84,33 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
       'NFS Mount Port'
     );
 
-    // const sstateFS = this.addFileSystem('SState', props.vpc, projectSg);
-    // const dlFS = this.addFileSystem('Downloads', props.vpc, projectSg);
-    // const tmpFS = this.addFileSystem('Temp', props.vpc, projectSg);
+    let efsFileSystem: efs.FileSystem;
 
-    let outputBucket: s3.IBucket | VMImportBucket;
-    let environmentVariables = {};
-    let scriptAsset!: Asset;
+    if (props.efsFileSystem) {
+      efsFileSystem = props.efsFileSystem;
+    } else {
+      const vpc = props.vpc;
+      efsFileSystem = new efs.FileSystem(
+        this,
+        `${id}-efs`,
+        {
+          vpc,
+          allowAnonymousAccess: true,
+          removalPolicy: cdk.RemovalPolicy.DESTROY,
+        }
+      );
+      efsFileSystem.connections.allowFrom(projectSg, Port.tcp(2049));
+      efsFileSystem.addAccessPoint(`${id}-efs-build-output`, {
+        path: '/build-output',
+      });
+      efsFileSystem.addAccessPoint(`${id}-efs-sstate-cache`, {
+        path: '/sstate-cache',
+      });
+      efsFileSystem.addAccessPoint(`${id}-efs-downloads`, {
+        path: '/downloads',
+      });
+    }
+
     let accessLoggingBucket: s3.IBucket;
 
     if (props.accessLoggingBucket) {
@@ -102,6 +123,10 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
         removalPolicy: RemovalPolicy.DESTROY,
       });
     }
+
+    let outputBucket: s3.IBucket | VMImportBucket;
+    let environmentVariables = {};
+    let scriptAsset!: Asset;
 
     if (props.projectKind && props.projectKind == ProjectKind.PokyAmi) {
       scriptAsset = new Asset(this, 'CreateAMIScript', {
@@ -213,25 +238,21 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
       timeout: cdk.Duration.hours(4),
       vpc: props.vpc,
       securityGroups: [projectSg],
-      fileSystemLocations: [
-        // FileSystemLocation.efs({
-        //   identifier: 'tmp_dir',
-        //   location: tmpFS,
-        //   mountPoint: '/build-output',
-        // }),
-        // FileSystemLocation.efs({
-        //   identifier: 'sstate_cache',
-        //   location: sstateFS,
-        //   mountPoint: '/sstate-cache',
-        // }),
-        // FileSystemLocation.efs({
-        //   identifier: 'dl_dir',
-        //   location: dlFS,
-        //   mountPoint: '/downloads',
-        // }),
-        FileSystemLocation.efs(this.createFileSystem('Temp', props.vpc, projectSg, 'tmp_dir', '/build-output')),
-        FileSystemLocation.efs(this.createFileSystem('SState', props.vpc, projectSg, 'sstate_cache', '/sstate-cache')),
-        FileSystemLocation.efs(this.createFileSystem('Downloads', props.vpc, projectSg, 'dl_dir', '/downloads'))
+      fileSystemLocations: [FileSystemLocation.efs({
+        identifier: 'tmp_dir',
+        location: `${efsFileSystem.fileSystemId}.efs.${efsFileSystem.env.region}.amazonaws.com:/build-output`,
+        mountPoint: '/build-output',
+      }),
+      FileSystemLocation.efs({
+        identifier: 'sstate_cache',
+        location: `${efsFileSystem.fileSystemId}.efs.${efsFileSystem.env.region}.amazonaws.com:/sstate-cache`,
+        mountPoint: '/sstate-cache',
+      }),
+      FileSystemLocation.efs({
+        identifier: 'dl_dir',
+        location: `${efsFileSystem.fileSystemId}.efs.${efsFileSystem.env.region}.amazonaws.com:/downloads`,
+        mountPoint: '/downloads',
+      }),
       ],
       logging: {
         cloudWatch: {
@@ -241,8 +262,6 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
         },
       },
     });
-
-    project.addToRolePolicy(this.addEFSPolicies());    
 
     if (props.buildPolicyAdditions) {
       props.buildPolicyAdditions.map((p) => project.addToRolePolicy(p));
@@ -387,93 +406,6 @@ def handler(event, context):
     });
   }
 
-  /**
-   * Adds an EFS FileSystem to the VPC and SecurityGroup.
-   *
-   * @param name - A name to differentiate the filesystem.
-   * @param vpc - The VPC the Filesystem resides in.
-   * @param securityGroup - A SecurityGroup to allow access to the filesystem from.
-   * @returns The filesystem location URL.
-   *
-   */
-  private createFileSystem(
-    name: string,
-    vpc: IVpc,
-    securityGroup: ISecurityGroup,
-    identifier: string,
-    mountPoint: string
-  ): {
-    identifier: string,
-    location: string,
-    mountPoint: string,
-  } {
-    const fs = new efs.FileSystem(
-      this,
-      `EmbeddedLinuxPipeline${name}Filesystem`,
-      {
-        vpc,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-      }
-    );
-
-    fs.connections.allowFrom(securityGroup, Port.tcp(2049));
-    fs.addAccessPoint(identifier, {
-      createAcl: {
-        ownerGid: '1000',
-        ownerUid: '1000',
-        permissions: '755',
-      },
-      path: mountPoint, // Example mount point path
-      posixUser: {
-        gid: '1000',
-        uid: '1000',
-      },
-    });
-
-    const fsId = fs.fileSystemId;
-    const region = cdk.Stack.of(this).region;
-
-    return {
-      identifier: identifier,
-      location: `${fsId}.efs.${region}.amazonaws.com:/`,
-      mountPoint: mountPoint,
-    };
-  }
-  private addFileSystem(
-    name: string,
-    vpc: IVpc,
-    securityGroup: ISecurityGroup
-  ): string {
-    const fs = new efs.FileSystem(
-      this,
-      `EmbeddedLinuxPipeline${name}Filesystem`,
-      {
-        vpc,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-      }
-    );
-    fs.connections.allowFrom(securityGroup, Port.tcp(2049));
-
-    const fsId = fs.fileSystemId;
-    const region = cdk.Stack.of(this).region;
-
-    return `${fsId}.efs.${region}.amazonaws.com:/`;
-  }
-
-
-  private addEFSPolicies(): iam.PolicyStatement {
-    return new iam.PolicyStatement({
-      actions: [
-        'elasticfilesystem:ClientMount',
-        'elasticfilesystem:ClientRootAccess',
-        'elasticfilesystem:ClientWrite',
-        'elasticfilesystem:DescribeMountTargets'
-      ],
-      resources: ['*'],
-    });
-  }
-
-
   private addVMExportPolicy(): iam.PolicyStatement {
     return new iam.PolicyStatement({
       actions: [
@@ -501,6 +433,7 @@ def handler(event, context):
       resources: [artifactBucketArn, `${artifactBucketArn}/*`],
     });
   }
+
   private addAMIEBSBackupPolicy(region: string): iam.PolicyStatement {
     return new iam.PolicyStatement({
       actions: [
