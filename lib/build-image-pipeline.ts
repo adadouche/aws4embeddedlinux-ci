@@ -143,7 +143,7 @@ export class BuildImagePipelineStack extends cdk.Stack {
 
     const pipeline = new codepipeline.Pipeline(this, 'BuildImagePipeline', {
       artifactBucket,
-      pipelineName: `${id}-build-image-pipeline-${props.imageKind}`,
+      pipelineName: `${id}-${props.imageKind}`,
       pipelineType: codepipeline.PipelineType.V1,
       stages: [
         {
