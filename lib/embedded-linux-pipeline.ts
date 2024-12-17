@@ -95,7 +95,7 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
         `EmbeddedLinuxPipelineFilesystem`,
         {
           vpc,
-          allowAnonymousAccess: false,
+          allowAnonymousAccess: true,
           removalPolicy: cdk.RemovalPolicy.DESTROY,
         }
       );
