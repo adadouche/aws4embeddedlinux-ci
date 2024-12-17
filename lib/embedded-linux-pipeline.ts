@@ -103,37 +103,37 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
       efsFileSystem.addAccessPoint(`${id}-efs-build-output`, {
         path: '/build-output',
         createAcl: {
-          ownerUid: '1001',
-          ownerGid: '1001',
-          permissions: '750',
+          ownerUid: 'root',
+          ownerGid: 'root',
+          permissions: '0744',
         },
         posixUser: {
-          uid: '1001',
-          gid: '1001',
+          uid: 'ec2-user',
+          gid: 'ec2-user',
         },
       });
       efsFileSystem.addAccessPoint(`${id}-efs-sstate-cache`, {
         path: '/sstate-cache',
         createAcl: {
-          ownerUid: '1001',
-          ownerGid: '1001',
-          permissions: '750',
+          ownerUid: 'root',
+          ownerGid: 'root',
+          permissions: '0744',
         },
         posixUser: {
-          uid: '1001',
-          gid: '1001',
+          uid: 'ec2-user',
+          gid: 'ec2-user',
         },
       });
       efsFileSystem.addAccessPoint(`${id}-efs-downloads`, {
         path: '/downloads',
         createAcl: {
-          ownerUid: '1001',
-          ownerGid: '1001',
-          permissions: '750',
+          ownerUid: 'root',
+          ownerGid: 'root',
+          permissions: '0744',
         },
         posixUser: {
-          uid: '1001',
-          gid: '1001',
+          uid: 'ec2-user',
+          gid: 'ec2-user',
         },
       });
     }
