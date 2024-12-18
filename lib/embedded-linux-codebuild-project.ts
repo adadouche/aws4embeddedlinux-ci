@@ -5,37 +5,21 @@ import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as efs from 'aws-cdk-lib/aws-efs';
-import * as s3 from 'aws-cdk-lib/aws-s3';
-
-import {
-  BuildSpec,
-  ComputeType,
-  FileSystemLocation,
-  LinuxBuildImage,
-  Project,
-} from 'aws-cdk-lib/aws-codebuild';
-import { IRepository } from 'aws-cdk-lib/aws-ecr';
-
-import {
-  ISecurityGroup,
-  IVpc,
-  Peer,
-  Port,
-  SecurityGroup,
-} from 'aws-cdk-lib/aws-ec2';
-import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { RemovalPolicy } from 'aws-cdk-lib';
+import * as codebuild from 'aws-cdk-lib/aws-codebuild';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
+import * as  ec2 from 'aws-cdk-lib/aws-ec2';
+import * as logs from 'aws-cdk-lib/aws-logs';
 
 /**
  * Properties to allow customizing the build.
  */
 export interface EmbeddedLinuxCodebuildProjectProps extends cdk.StackProps {
   /** ECR Repository where the Build Host Image resides. */
-  readonly imageRepo: IRepository;
+  readonly imageRepo: ecr.IRepository;
   /** Tag for the Build Host Image */
   readonly imageTag?: string;
   /** VPC where the networking setup resides. */
-  readonly vpc: IVpc;
+  readonly vpc: ec2.IVpc;
   /** Additional policy statements to add to the build project. */
   readonly buildPolicyAdditions?: iam.PolicyStatement[];
 }
@@ -55,13 +39,13 @@ export class EmbeddedLinuxCodebuildProjectStack extends cdk.Stack {
 
     /** Set up networking access and EFS FileSystems. */
 
-    const projectSg = new SecurityGroup(this, 'BuildProjectSecurityGroup', {
+    const projectSg = new ec2.SecurityGroup(this, 'BuildProjectSecurityGroup', {
       vpc: props.vpc,
       description: 'Security Group to allow attaching EFS',
     });
     projectSg.addIngressRule(
-      Peer.ipv4(props.vpc.vpcCidrBlock),
-      Port.tcp(2049),
+      ec2.Peer.ipv4(props.vpc.vpcCidrBlock),
+      ec2.Port.tcp(2049),
       'NFS Mount Port'
     );
 
@@ -74,12 +58,12 @@ export class EmbeddedLinuxCodebuildProjectStack extends cdk.Stack {
         removalPolicy: cdk.RemovalPolicy.DESTROY,
       }
     );
-    efsFileSystem.connections.allowFrom(projectSg, Port.tcp(2049));
+    efsFileSystem.connections.allowFrom(projectSg, ec2.Port.tcp(2049));
 
 
     /** Create our CodeBuild Project. */
-    const project = new Project(this, 'EmbeddedLinuxCodebuildProject', {
-      buildSpec: BuildSpec.fromObject({
+    const project = new codebuild.Project(this, 'EmbeddedLinuxCodebuildProject', {
+      buildSpec: codebuild.BuildSpec.fromObject({
         version: '0.2',
         phases: {
           build: {
@@ -92,8 +76,8 @@ export class EmbeddedLinuxCodebuildProjectStack extends cdk.Stack {
         },
       }),
       environment: {
-        computeType: ComputeType.X2_LARGE,
-        buildImage: LinuxBuildImage.fromEcrRepository(
+        computeType: codebuild.ComputeType.X2_LARGE,
+        buildImage: codebuild.LinuxBuildImage.fromEcrRepository(
           props.imageRepo,
           props.imageTag
         ),
@@ -103,7 +87,7 @@ export class EmbeddedLinuxCodebuildProjectStack extends cdk.Stack {
       vpc: props.vpc,
       securityGroups: [projectSg],
       fileSystemLocations: [
-        FileSystemLocation.efs({
+        codebuild.FileSystemLocation.efs({
           identifier: 'nfs',
           location: `${efsFileSystem.fileSystemId}.efs.${efsFileSystem.env.region}.amazonaws.com:/`,
           mountPoint: '/nfs',
@@ -111,8 +95,8 @@ export class EmbeddedLinuxCodebuildProjectStack extends cdk.Stack {
       ],
       logging: {
         cloudWatch: {
-          logGroup: new LogGroup(this, 'PipelineBuildLogs', {
-            retention: RetentionDays.TEN_YEARS,
+          logGroup: new logs.LogGroup(this, 'PipelineBuildLogs', {
+            retention: logs.RetentionDays.TEN_YEARS,
           }),
         },
       },
@@ -157,7 +141,7 @@ def handler(event, context):
     abandon=True,
     reason='OS image not found in ECR repository. Stopping pipeline until image is present.')
     `),
-        logRetention: RetentionDays.TEN_YEARS,
+        logRetention: logs.RetentionDays.TEN_YEARS,
       }
     );
 
