@@ -4,14 +4,14 @@ FROM public.ecr.aws/lts/ubuntu:22.04_stable AS base
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install Required Packages for the Build Host
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get -qq update && apt-get -qq install -y --no-install-recommends \
     gawk wget git diffstat unzip texinfo gcc build-essential chrpath \
     socat cpio python3 python3-pip python3-pexpect xz-utils debianutils \
     iputils-ping python3-git python3-jinja2 libegl1-mesa libsdl1.2-dev \
     python3-subunit mesa-common-dev zstd liblz4-tool file locales xterm sudo
 
 # Install packages used elsewhere in the build
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get -qq install -y --no-install-recommends \
     uuid-runtime sysstat iproute2 openssh-client curl python-is-python3 \
     parted mtools dosfstools jq gpg gpg-agent qemu-utils rsync
 
@@ -21,11 +21,11 @@ RUN chmod a+rx /bin/repo
 
 # Install aws cli v2
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
-RUN unzip /tmp/awscliv2.zip -d /tmp
+RUN unzip -qq /tmp/awscliv2.zip -d /tmp
 RUN /tmp/aws/install
 
 # install kas tool
-RUN pip3 install PyYAML==5.3.1 && pip3 install kas==4.0.0
+RUN pip3 install -q PyYAML==5.3.1 -q && pip3 install -q kas==4.0.0 
 
 RUN locale-gen en_US.UTF-8
 
