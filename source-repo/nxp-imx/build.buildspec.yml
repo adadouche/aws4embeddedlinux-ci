@@ -11,10 +11,10 @@ phases:
   pre_build:
     run-as: root
     commands:
-      - chown -R yoctouser /nfs/sstate-cache
-      - chown -R yoctouser /nfs/downloads
-      - chmod 755 /nfs/sstate-cache
-      - chmod 755 /nfs/downloads
+      - mkdir -p /nfs/sstate-cache && chown -R yoctouser /nfs/sstate-cache
+      - mkdir -p /nfs/downloads && chown -R yoctouser /nfs/downloads
+      - chmod -R 755 /nfs/sstate-cache
+      - chmod -R 755 /nfs/downloads
       - |
           if [[ -n "$PURGE_EFS" ]] ; then
             echo "Starting EFS purge."
