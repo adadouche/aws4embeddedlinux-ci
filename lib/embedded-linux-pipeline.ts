@@ -1,7 +1,9 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import { Asset } from 'aws-cdk-lib/aws-s3-assets';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codepipeline_actions from 'aws-cdk-lib/aws-codepipeline-actions';
+import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -10,40 +12,23 @@ import * as efs from 'aws-cdk-lib/aws-efs';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as path from 'path';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as logs from 'aws-cdk-lib/aws-logs';
 
-import {
-  BuildEnvironmentVariableType,
-  BuildSpec,
-  ComputeType,
-  FileSystemLocation,
-  LinuxBuildImage,
-  PipelineProject,
-} from 'aws-cdk-lib/aws-codebuild';
-import { IRepository } from 'aws-cdk-lib/aws-ecr';
-
-import {
-  ISecurityGroup,
-  IVpc,
-  Peer,
-  Port,
-  SecurityGroup,
-} from 'aws-cdk-lib/aws-ec2';
 import { SourceRepo, ProjectKind } from './constructs/source-repo';
 import { VMImportBucket } from './vm-import-bucket';
-import { Asset } from 'aws-cdk-lib/aws-s3-assets';
-import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { RemovalPolicy } from 'aws-cdk-lib';
 
 /**
  * Properties to allow customizing the build.
  */
 export interface EmbeddedLinuxPipelineProps extends cdk.StackProps {
   /** ECR Repository where the Build Host Image resides. */
-  readonly imageRepo: IRepository;
+  readonly imageRepo: ecr.IRepository;
   /** Tag for the Build Host Image */
   readonly imageTag?: string;
   /** VPC where the networking setup resides. */
-  readonly vpc: IVpc;
+  readonly vpc: ec2.IVpc;
   /** The type of project being built.  */
   readonly projectKind?: ProjectKind;
   /** A name for the layer-repo that is created. Default is 'layer-repo' */
@@ -73,13 +58,13 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
 
     /** Set up networking access and EFS FileSystems. */
 
-    const projectSg = new SecurityGroup(this, 'BuildProjectSecurityGroup', {
+    const projectSg = new ec2.SecurityGroup(this, 'BuildProjectSecurityGroup', {
       vpc: props.vpc,
       description: 'Security Group to allow attaching EFS',
     });
     projectSg.addIngressRule(
-      Peer.ipv4(props.vpc.vpcCidrBlock),
-      Port.tcp(2049),
+      ec2.Peer.ipv4(props.vpc.vpcCidrBlock),
+      ec2.Port.tcp(2049),
       'NFS Mount Port'
     );
 
@@ -92,7 +77,7 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
         removalPolicy: cdk.RemovalPolicy.DESTROY,
       }
     );
-    efsFileSystem.connections.allowFrom(projectSg, Port.tcp(2049));
+    efsFileSystem.connections.allowFrom(projectSg, ec2.Port.tcp(2049));
 
     let accessLoggingBucket: s3.IBucket;
 
@@ -103,7 +88,7 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
         versioned: true,
         enforceSSL: true,
         autoDeleteObjects: true,
-        removalPolicy: RemovalPolicy.DESTROY,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
       });
     }
 
@@ -120,7 +105,7 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
         this,
         'OutputBucketEncryptionKey',
         {
-          removalPolicy: RemovalPolicy.DESTROY,
+          removalPolicy: cdk.RemovalPolicy.DESTROY,
           enableKeyRotation: true,
         }
       );
@@ -136,20 +121,20 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
           serverAccessLogsBucket: accessLoggingBucket,
           serverAccessLogsPrefix: props.serverAccessLogsPrefix,
           autoDeleteObjects: true,
-          removalPolicy: RemovalPolicy.DESTROY,
+          removalPolicy: cdk.RemovalPolicy.DESTROY,
         });
       }
       environmentVariables = {
         IMPORT_BUCKET: {
-          type: BuildEnvironmentVariableType.PLAINTEXT,
+          type: codebuild.BuildEnvironmentVariableType.PLAINTEXT,
           value: outputBucket.bucketName,
         },
         ROLE_NAME: {
-          type: BuildEnvironmentVariableType.PLAINTEXT,
+          type: codebuild.BuildEnvironmentVariableType.PLAINTEXT,
           value: (outputBucket as VMImportBucket).roleName,
         },
         SCRIPT_URL: {
-          type: BuildEnvironmentVariableType.PLAINTEXT,
+          type: codebuild.BuildEnvironmentVariableType.PLAINTEXT,
           value: scriptAsset.s3ObjectUrl,
         },
       };
@@ -162,7 +147,7 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
           enforceSSL: true,
           serverAccessLogsBucket: accessLoggingBucket,
           autoDeleteObjects: true,
-          removalPolicy: RemovalPolicy.DESTROY,
+          removalPolicy: cdk.RemovalPolicy.DESTROY,
         });
       }
     }
@@ -173,7 +158,7 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
       artifactBucket = props.artifactBucket;
     } else {
       const encryptionKey = new kms.Key(this, 'PipelineArtifactKey', {
-        removalPolicy: RemovalPolicy.DESTROY,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
         enableKeyRotation: true,
       });
       artifactBucket = new s3.Bucket(this, 'PipelineArtifacts', {
@@ -186,7 +171,7 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
           s3.BlockPublicAccess.BLOCK_ALL
         ),
         autoDeleteObjects: true,
-        removalPolicy: RemovalPolicy.DESTROY,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
       });
     }
 
@@ -197,21 +182,21 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
       kind: props.projectKind ?? ProjectKind.Poky,
     });
 
-    const sourceOutput = new codepipeline.Artifact();
+    const sourceOutput = new codepipeline.Artifact('BuildImageSource');
     const sourceAction = new codepipeline_actions.CodeCommitSourceAction({
       // trigger: CodeCommitTrigger.NONE,
-      output: sourceOutput,
       actionName: 'Source',
+      output: sourceOutput,
       repository: sourceRepo.repo,
       branch: 'main',
       codeBuildCloneOutput: true,
     });
 
-    const project = new PipelineProject(this, 'EmbeddedLinuxBuildProject', {
-      buildSpec: BuildSpec.fromSourceFilename('build.buildspec.yml'),
+    const project = new codebuild.PipelineProject(this, 'EmbeddedLinuxBuildProject', {
+      buildSpec: codebuild.BuildSpec.fromSourceFilename('build.buildspec.yml'),
       environment: {
-        computeType: ComputeType.X2_LARGE,
-        buildImage: LinuxBuildImage.fromEcrRepository(
+        computeType: codebuild.ComputeType.X2_LARGE,
+        buildImage: codebuild.LinuxBuildImage.fromEcrRepository(
           props.imageRepo,
           props.imageTag
         ),
@@ -222,7 +207,7 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
       vpc: props.vpc,
       securityGroups: [projectSg],
       fileSystemLocations: [
-        FileSystemLocation.efs({
+        codebuild.FileSystemLocation.efs({
           identifier: 'nfs',
           location: `${efsFileSystem.fileSystemId}.efs.${efsFileSystem.env.region}.amazonaws.com:/`,
           mountPoint: '/nfs',
@@ -230,8 +215,8 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
       ],
       logging: {
         cloudWatch: {
-          logGroup: new LogGroup(this, 'PipelineBuildLogs', {
-            retention: RetentionDays.TEN_YEARS,
+          logGroup: new logs.LogGroup(this, 'PipelineBuildLogs', {
+            retention: logs.RetentionDays.TEN_YEARS,
           }),
         },
       },
@@ -318,7 +303,7 @@ def handler(event, context):
     abandon=True,
     reason='OS image not found in ECR repository. Stopping pipeline until image is present.')
     `),
-        logRetention: RetentionDays.TEN_YEARS,
+        logRetention: logs.RetentionDays.TEN_YEARS,
       }
     );
 

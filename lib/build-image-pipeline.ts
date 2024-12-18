@@ -3,13 +3,12 @@ import { Construct } from 'constructs';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codepipeline_actions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
-import { IRepository } from 'aws-cdk-lib/aws-ecr';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as events from 'aws-cdk-lib/aws-events';
-import { CodePipeline } from 'aws-cdk-lib/aws-events-targets';
-import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as kms from 'aws-cdk-lib/aws-kms';
-import { RemovalPolicy } from 'aws-cdk-lib';
+import * as events_target from 'aws-cdk-lib/aws-events-targets';
 
 /**
  * The type of Image to build on.
@@ -28,7 +27,7 @@ export interface BuildImagePipelineProps extends cdk.StackProps {
   /** The data bucket from the {@link BuildImageDataStack} */
   readonly dataBucket: s3.IBucket;
   /** The ECR Repository to push to. */
-  readonly repository: IRepository;
+  readonly repository: ecr.IRepository;
   /** Access logging bucket to use */
   readonly accessLoggingBucket?: s3.Bucket;
   /** Access logging prefix to use */
@@ -50,10 +49,10 @@ export class BuildImagePipelineStack extends cdk.Stack {
     // Create a source action.
     const sourceOutput = new codepipeline.Artifact('BuildImageSource');
     const sourceAction = new codepipeline_actions.S3SourceAction({
-      actionName: 'Build-Image-Source',
+      actionName: 'Source',
+      output: sourceOutput,
       bucket: props.dataBucket,
       bucketKey: 'data.zip',
-      output: sourceOutput,
     });
 
     // Create a build action.
@@ -89,8 +88,8 @@ export class BuildImagePipelineStack extends cdk.Stack {
         },
         logging: {
           cloudWatch: {
-            logGroup: new LogGroup(this, 'BuildImageBuildLogs', {
-              retention: RetentionDays.TEN_YEARS,
+            logGroup: new logs.LogGroup(this, 'BuildImageBuildLogs', {
+              retention: logs.RetentionDays.TEN_YEARS,
             }),
           },
         },
@@ -113,7 +112,7 @@ export class BuildImagePipelineStack extends cdk.Stack {
         versioned: true,
         enforceSSL: true,
         autoDeleteObjects: true,
-        removalPolicy: RemovalPolicy.DESTROY,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
       });
     }
 
@@ -123,7 +122,7 @@ export class BuildImagePipelineStack extends cdk.Stack {
       artifactBucket = props.artifactBucket;
     } else {
       const encryptionKey = new kms.Key(this, 'PipelineArtifactKey', {
-        removalPolicy: RemovalPolicy.DESTROY,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
         enableKeyRotation: true,
       });
       artifactBucket = new s3.Bucket(this, 'PipelineArtifacts', {
@@ -137,7 +136,7 @@ export class BuildImagePipelineStack extends cdk.Stack {
           s3.BlockPublicAccess.BLOCK_ALL
         ),
         autoDeleteObjects: true,
-        removalPolicy: RemovalPolicy.DESTROY,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
       });
     }
 
@@ -159,7 +158,7 @@ export class BuildImagePipelineStack extends cdk.Stack {
     });
 
     // Run this pipeline weekly to update the image OS.
-    const pipelineTarget = new CodePipeline(pipeline);
+    const pipelineTarget = new events_target.CodePipeline(pipeline);
     new events.Rule(this, 'WeeklySchedule', {
       schedule: events.Schedule.cron({
         weekDay: 'Monday',
