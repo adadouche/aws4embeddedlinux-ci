@@ -34,14 +34,12 @@ RUN groupadd -g 1000 yoctouser
 RUN useradd -u 1000 -g 1000 -m yoctouser
 
 # These will be mount points for an EFS volume. This allows the cache to be reused.
-RUN mkdir /downloads && chown -R yoctouser /downloads
-RUN mkdir /sstate-cache && chown -R yoctouser /sstate-cache
-RUN mkdir /build-output && chown -R yoctouser /build-output
+RUN mkdir -p /nfs && chown -R yoctouser /nfs
 
-ENV SSTATE_DIR=/sstate-cache
-ENV DL_DIR=/downloads
 ENV TMP_DIR=/tmp
-ENV OUTPUT_DIR=/build-output
+ENV SSTATE_DIR=/nfs/sstate-cache
+ENV DL_DIR=/nfs/downloads
+ENV OUTPUT_DIR=/nfs/build-output
 ENV BB_ENV_PASSTHROUGH_ADDITIONS="SSTATE_DIR DL_DIR"
 
 USER yoctouser

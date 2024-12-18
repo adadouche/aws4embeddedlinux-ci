@@ -23,8 +23,6 @@ import {
   Port,
   SecurityGroup,
 } from 'aws-cdk-lib/aws-ec2';
-import { ProjectKind } from './constructs/source-repo';
-import { VMImportBucket } from './vm-import-bucket';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { RemovalPolicy } from 'aws-cdk-lib';
 
@@ -38,22 +36,8 @@ export interface EmbeddedLinuxCodebuildProjectProps extends cdk.StackProps {
   readonly imageTag?: string;
   /** VPC where the networking setup resides. */
   readonly vpc: IVpc;
-  /** The type of project being built.  */
-  readonly projectKind?: ProjectKind;
-  /** A name for the layer-repo that is created. Default is 'layer-repo' */
-  readonly layerRepoName?: string;
   /** Additional policy statements to add to the build project. */
   readonly buildPolicyAdditions?: iam.PolicyStatement[];
-  /** Access logging bucket to use */
-  readonly accessLoggingBucket?: s3.Bucket;
-  /** Access logging prefix to use */
-  readonly serverAccessLogsPrefix?: string;
-  /** Artifact bucket to use */
-  readonly artifactBucket?: s3.Bucket;
-  /** Output bucket to use */
-  readonly outputBucket?: s3.Bucket | VMImportBucket;
-  /** Prefix for S3 object within bucket */
-  readonly subDirectoryName?: string;
 }
 
 /**
@@ -81,23 +65,17 @@ export class EmbeddedLinuxCodebuildProjectStack extends cdk.Stack {
       'NFS Mount Port'
     );
 
-    const sstateFS = this.addFileSystem('SState', props.vpc, projectSg);
-    const dlFS = this.addFileSystem('Downloads', props.vpc, projectSg);
-    const tmpFS = this.addFileSystem('Temp', props.vpc, projectSg);
+    const efsFileSystem: efs.FileSystem = new efs.FileSystem(
+      this,
+      `EmbeddedLinuxPipelineFilesystem`,
+      {
+        vpc: props.vpc,
+        allowAnonymousAccess: true,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }
+    );
+    efsFileSystem.connections.allowFrom(projectSg, Port.tcp(2049));
 
-    // let accessLoggingBucket: s3.IBucket;
-
-    if (props.accessLoggingBucket) {
-      // accessLoggingBucket = props.accessLoggingBucket;
-    } else {
-      /* accessLoggingBucket = */
-      new s3.Bucket(this, 'ArtifactAccessLogging', {
-        versioned: true,
-        enforceSSL: true,
-        autoDeleteObjects: true,
-        removalPolicy: RemovalPolicy.DESTROY,
-      });
-    }
 
     /** Create our CodeBuild Project. */
     const project = new Project(this, 'EmbeddedLinuxCodebuildProject', {
@@ -126,19 +104,9 @@ export class EmbeddedLinuxCodebuildProjectStack extends cdk.Stack {
       securityGroups: [projectSg],
       fileSystemLocations: [
         FileSystemLocation.efs({
-          identifier: 'tmp_dir',
-          location: tmpFS,
-          mountPoint: '/build-output',
-        }),
-        FileSystemLocation.efs({
-          identifier: 'sstate_cache',
-          location: sstateFS,
-          mountPoint: '/sstate-cache',
-        }),
-        FileSystemLocation.efs({
-          identifier: 'dl_dir',
-          location: dlFS,
-          mountPoint: '/downloads',
+          identifier: 'nfs',
+          location: `${efsFileSystem.fileSystemId}.efs.${efsFileSystem.env.region}.amazonaws.com:/`,
+          mountPoint: '/nfs',
         }),
       ],
       logging: {
@@ -208,37 +176,6 @@ def handler(event, context):
     pipelineCreateRule.addTarget(
       new targets.LambdaFunction(fnOnPipelineCreate)
     );
-  }
-
-  /**
-   * Adds an EFS FileSystem to the VPC and SecurityGroup.
-   *
-   * @param name - A name to differentiate the filesystem.
-   * @param vpc - The VPC the Filesystem resides in.
-   * @param securityGroup - A SecurityGroup to allow access to the filesystem from.
-   * @returns The filesystem location URL.
-   *
-   */
-  private addFileSystem(
-    name: string,
-    vpc: IVpc,
-    securityGroup: ISecurityGroup
-  ): string {
-    const fs = new efs.FileSystem(
-      this,
-      `EmbeddedLinuxPipeline${name}Filesystem`,
-      {
-        vpc,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-      }
-    );
-
-    fs.connections.allowFrom(securityGroup, Port.tcp(2049));
-
-    const fsId = fs.fileSystemId;
-    const region = cdk.Stack.of(this).region;
-
-    return `${fsId}.efs.${region}.amazonaws.com:/`;
   }
 
   private addProjectPolicies(): iam.PolicyStatement {

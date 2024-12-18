@@ -83,13 +83,17 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
       'NFS Mount Port'
     );
 
-    const sstateFS = this.addFileSystem('SState', props.vpc, projectSg);
-    const dlFS = this.addFileSystem('Downloads', props.vpc, projectSg);
-    const tmpFS = this.addFileSystem('Temp', props.vpc, projectSg);
+    const efsFileSystem: efs.FileSystem = new efs.FileSystem(
+      this,
+      `EmbeddedLinuxPipelineFilesystem`,
+      {
+        vpc: props.vpc,
+        allowAnonymousAccess: true,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      }
+    );
+    efsFileSystem.connections.allowFrom(projectSg, Port.tcp(2049));
 
-    let outputBucket: s3.IBucket | VMImportBucket;
-    let environmentVariables = {};
-    let scriptAsset!: Asset;
     let accessLoggingBucket: s3.IBucket;
 
     if (props.accessLoggingBucket) {
@@ -102,6 +106,10 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
         removalPolicy: RemovalPolicy.DESTROY,
       });
     }
+
+    let outputBucket: s3.IBucket | VMImportBucket;
+    let environmentVariables = {};
+    let scriptAsset!: Asset;
 
     if (props.projectKind && props.projectKind == ProjectKind.PokyAmi) {
       scriptAsset = new Asset(this, 'CreateAMIScript', {
@@ -215,19 +223,9 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
       securityGroups: [projectSg],
       fileSystemLocations: [
         FileSystemLocation.efs({
-          identifier: 'tmp_dir',
-          location: tmpFS,
-          mountPoint: '/build-output',
-        }),
-        FileSystemLocation.efs({
-          identifier: 'sstate_cache',
-          location: sstateFS,
-          mountPoint: '/sstate-cache',
-        }),
-        FileSystemLocation.efs({
-          identifier: 'dl_dir',
-          location: dlFS,
-          mountPoint: '/downloads',
+          identifier: 'nfs',
+          location: `${efsFileSystem.fileSystemId}.efs.${efsFileSystem.env.region}.amazonaws.com:/`,
+          mountPoint: '/nfs',
         }),
       ],
       logging: {
@@ -380,36 +378,6 @@ def handler(event, context):
       value: outputBucket.bucketArn,
       description: 'The output bucket of this pipeline.',
     });
-  }
-
-  /**
-   * Adds an EFS FileSystem to the VPC and SecurityGroup.
-   *
-   * @param name - A name to differentiate the filesystem.
-   * @param vpc - The VPC the Filesystem resides in.
-   * @param securityGroup - A SecurityGroup to allow access to the filesystem from.
-   * @returns The filesystem location URL.
-   *
-   */
-  private addFileSystem(
-    name: string,
-    vpc: IVpc,
-    securityGroup: ISecurityGroup
-  ): string {
-    const fs = new efs.FileSystem(
-      this,
-      `EmbeddedLinuxPipeline${name}Filesystem`,
-      {
-        vpc,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-      }
-    );
-    fs.connections.allowFrom(securityGroup, Port.tcp(2049));
-
-    const fsId = fs.fileSystemId;
-    const region = cdk.Stack.of(this).region;
-
-    return `${fsId}.efs.${region}.amazonaws.com:/`;
   }
 
   private addVMExportPolicy(): iam.PolicyStatement {

@@ -11,15 +11,15 @@ phases:
   pre_build:
     run-as: root
     commands:
-      - chown -R yoctouser /sstate-cache
-      - chown -R yoctouser /downloads
-      - chmod 755 /sstate-cache
-      - chmod 755 /downloads
+      - chown -R yoctouser /nfs/sstate-cache
+      - chown -R yoctouser /nfs/downloads
+      - chmod 755 /nfs/sstate-cache
+      - chmod 755 /nfs/downloads
       - |
           if [[ -n "$PURGE_EFS" ]] ; then
             echo "Starting EFS purge."
-            rm -rvf /downloads/*
-            rm -rvf /sstate-cache/*
+            rm -rvf /nfs/downloads/*
+            rm -rvf /nfs/sstate-cache/*
           fi
   build:
     commands:
@@ -42,13 +42,13 @@ phases:
   post_build:
     commands:
       # Prune old files in our EFS Mounts, that are not accessed by this or any build within 30 days
-      - find /sstate-cache -atime +30 -type f -delete
+      - find /nfs/sstate-cache -atime +30 -type f -delete
       # only delete empty dirs
-      - find /sstate-cache -atime +30 -type d -empty -delete
+      - find /nfs/sstate-cache -atime +30 -type d -empty -delete
       # Prune old files in our EFS Mounts, that are not accessed by this or any build within 30 days
-      - find /downloads -atime +30 -type f -delete
+      - find /nfs/downloads -atime +30 -type f -delete
       # only delete empty dirs
-      - find /downloads -atime +30 -type d -empty -delete
+      - find /nfs/downloads -atime +30 -type d -empty -delete
 
 artifacts:
   discard-paths: true
