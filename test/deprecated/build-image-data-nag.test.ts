@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
-import { BuildImageDataStack } from '../lib/build-image-data';
+import { BuildImageDataStack } from '../../lib/deprecated/build-image-data';
 
 import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { App, Aspects, Stack } from 'aws-cdk-lib';

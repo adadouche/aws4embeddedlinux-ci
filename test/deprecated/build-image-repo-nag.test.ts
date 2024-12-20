@@ -1,4 +1,4 @@
-import { BuildImageRepoStack } from '../lib/build-image-repo';
+import { BuildImageRepoStack } from '../../lib/deprecated/build-image-repo';
 import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { App, Aspects, Stack } from 'aws-cdk-lib';
 import { AwsSolutionsChecks } from 'cdk-nag';

@@ -1,11 +1,11 @@
-import { EmbeddedLinuxPipelineStack } from '../lib/embedded-linux-pipeline';
+import { EmbeddedLinuxPipelineStack } from '../../lib/deprecated/embedded-linux-pipeline';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
 import { Vpc } from 'aws-cdk-lib/aws-ec2';
 
 import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { App, Aspects, Stack } from 'aws-cdk-lib';
 import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
-import { ProjectKind } from '../lib';
+import { ProjectKind } from '../../lib';
 
 describe('Pipeline cdk-nag AwsSolutions Pack', () => {
   let stack: Stack;

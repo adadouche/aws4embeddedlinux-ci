@@ -1,20 +1,24 @@
-import { PipelineNetworkStack } from '../lib/network';
+import { SourceRepo, ProjectKind } from '../../lib/deprecated/constructs/source-repo';
+
 import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { App, Aspects, Stack } from 'aws-cdk-lib';
 import { AwsSolutionsChecks } from 'cdk-nag';
 
-describe('Pipeline Networking cdk-nag AwsSolutions Pack', () => {
-  const props = {
-    env: { account: '111111111111', region: 'eu-central-1' },
-  };
+describe('Demo Source Repository cdk-nag AwsSolutions Pack', () => {
   let stack: Stack;
   let app: App;
-  // In this case we can use beforeAll() over beforeEach() since our tests
-  // do not modify the state of the application
+
   beforeAll(() => {
     // GIVEN
+    const props = {
+      env: { account: '12341234', region: 'eu-central-1' },
+      kind: ProjectKind.Poky,
+      repoName: 'charlie',
+    };
+
     app = new App();
-    stack = new PipelineNetworkStack(app, 'PipelineNetworkStack', props);
+    stack = new Stack(app, 'TestStack', props);
+    new SourceRepo(stack, 'MyTestStack', props);
 
     // WHEN
     Aspects.of(stack).add(new AwsSolutionsChecks({ verbose: true }));
