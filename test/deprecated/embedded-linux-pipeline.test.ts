@@ -1,9 +1,9 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { EmbeddedLinuxPipelineStack } from '../lib/embedded-linux-pipeline';
+import { EmbeddedLinuxPipelineStack } from '../../lib/deprecated/embedded-linux-pipeline';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
 import { Vpc } from 'aws-cdk-lib/aws-ec2';
-import { ProjectKind } from '../lib';
+import { ProjectKind } from '../../lib';
 import { normalizedTemplateFromStack } from './util';
 
 describe('Pipeline', () => {

@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { BuildImageRepoStack } from '../lib/build-image-repo';
+import { BuildImageRepoStack } from '../../lib/deprecated/build-image-repo';
 
 describe('Build Image Repository', () => {
   const props = {

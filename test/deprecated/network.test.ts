@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { PipelineNetworkStack } from '../lib/network';
+import { PipelineNetworkStack } from '../../lib/deprecated/network';
 
 describe('Pipeline Networking', () => {
   const props = {

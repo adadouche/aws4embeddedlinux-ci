@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { BuildImageDataStack } from '../lib/build-image-data';
+import { BuildImageDataStack } from '../../lib/deprecated/build-image-data';
 import { normalizedTemplateFromStack } from './util';
 
 describe('Build Image Data', () => {

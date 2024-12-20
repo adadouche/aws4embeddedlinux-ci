@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { SourceRepo, ProjectKind } from '../lib/constructs/source-repo';
+import { SourceRepo, ProjectKind } from '../../lib/deprecated/constructs/source-repo';
 
 describe('Pipeline Source Repository', () => {
   const props = {

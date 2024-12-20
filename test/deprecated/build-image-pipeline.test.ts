@@ -3,7 +3,7 @@ import { Template } from 'aws-cdk-lib/assertions';
 import {
   BuildImagePipelineStack,
   ImageKind,
-} from '../lib/build-image-pipeline';
+} from '../../lib/deprecated/build-image-pipeline';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 
