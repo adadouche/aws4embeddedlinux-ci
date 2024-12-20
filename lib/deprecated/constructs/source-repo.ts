@@ -52,7 +52,7 @@ export class SourceRepo extends Construct {
     this.repo = new Repository(this, 'SourceRepository', {
       repositoryName: props.repoName,
       code: Code.fromDirectory(
-        path.join(__dirname, '..', '..', 'source-repo', props.kind),
+        path.join(__dirname, '..', '..', '..', 'source-repo', props.kind),
         'main'
       ),
     });

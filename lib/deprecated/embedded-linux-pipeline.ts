@@ -112,7 +112,7 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
 
     if (props.projectKind && props.projectKind == ProjectKind.PokyAmi) {
       scriptAsset = new Asset(this, 'CreateAMIScript', {
-        path: path.join(__dirname, '../assets/create-ec2-ami.sh'),
+        path: path.join(__dirname, '../../assets/create-ec2-ami.sh'),
       });
 
       const outputBucketEncryptionKey = new kms.Key(

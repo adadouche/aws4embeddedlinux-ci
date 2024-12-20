@@ -44,6 +44,11 @@ export class BuildImageDataStack extends cdk.Stack {
    * @param env - Environment passed to the stack.
    */
   private createDeploymentBucket(bucketName: string): s3.IBucket {
+    const sourceBase: string = 'pipeline-source-base-image';
+    const sourceFileName: string = 'source-base-image.zip';
+    const sourceLocalPath: string = `assets/${sourceBase}`;
+    const sourceDestinationKeyPrefix: string = `assets/${sourceBase}`;
+
     const accessLoggingBucket = new s3.Bucket(this, 'LoggingBucket', {
       versioned: true,
       enforceSSL: true,
@@ -100,7 +105,7 @@ export class BuildImageDataStack extends cdk.Stack {
 
     new BucketDeployment(this, 'BuildImageBucketDeployment', {
       // Note: Run `npm run zip-data` before deploying this stack!
-      sources: [Source.asset(path.join(__dirname, '..', 'assets/pipeline-source-base-image'))],
+      sources: [Source.asset(path.join(__dirname, '..', '..', sourceLocalPath))],
       destinationBucket: dataBucket,
       role: dataBucketDeploymentRole,
       extract: true,
