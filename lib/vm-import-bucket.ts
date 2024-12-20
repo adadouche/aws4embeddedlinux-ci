@@ -1,13 +1,14 @@
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as kms from 'aws-cdk-lib/aws-kms';
 
 const TAG = 'aws4embeddedlinux-ci';
 
 export interface VMImportBucketProps extends s3.BucketProps {
   /**  The sanitized role name */
   readonly sanitizedRoleName?: string;
-  readonly encryptionKeyArn: string;
+  readonly encryptionKey: kms.Key;
 }
 
 /**
@@ -52,7 +53,7 @@ export class VMImportBucket extends s3.Bucket {
             'kms:DescribeKey',
             'kms:GenerateDataKeyWithoutPlaintext',
           ],
-          resources: [props.encryptionKeyArn],
+          resources: [props.encryptionKey.keyArn],
         }),
       ],
     });

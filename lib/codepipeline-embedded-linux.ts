@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
 import { Asset } from 'aws-cdk-lib/aws-s3-assets';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codepipeline_actions from 'aws-cdk-lib/aws-codepipeline-actions';
@@ -9,56 +10,58 @@ import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as efs from 'aws-cdk-lib/aws-efs';
-import * as kms from 'aws-cdk-lib/aws-kms';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as path from 'path';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as logs from 'aws-cdk-lib/aws-logs';
-
-import { SourceRepo, ProjectKind } from './constructs/source-repo';
+import * as kms from 'aws-cdk-lib/aws-kms';
 import { VMImportBucket } from './vm-import-bucket';
+import { ProjectKind } from '.';
 
 /**
  * Properties to allow customizing the build.
  */
-export interface EmbeddedLinuxPipelineProps extends cdk.StackProps {
+export interface EmbeddedLinuxCodePipelineProps extends cdk.StackProps {
+  /** The source bucket */
+  readonly sourceBucket: s3.IBucket;
   /** ECR Repository where the Build Host Image resides. */
-  readonly imageRepo: ecr.IRepository;
+  readonly ecrRepository: ecr.IRepository;
   /** Tag for the Build Host Image */
-  readonly imageTag?: string;
+  readonly ecrRepositoryImageTag: string;
+  /** Artifact bucket to use */
+  readonly artifactBucket: s3.Bucket;
+  /** Output bucket to use */
+  readonly outputBucket: s3.Bucket | VMImportBucket;
+  /** The type of project being built.  */
+  readonly projectKind: ProjectKind;
   /** VPC where the networking setup resides. */
   readonly vpc: ec2.IVpc;
-  /** The type of project being built.  */
-  readonly projectKind?: ProjectKind;
-  /** A name for the layer-repo that is created. Default is 'layer-repo' */
-  readonly layerRepoName?: string;
+  /** Prefix for S3 object within bucket */
+  readonly artifactOutputObjectKey?: string;
   /** Additional policy statements to add to the build project. */
   readonly buildPolicyAdditions?: iam.PolicyStatement[];
-  /** Access logging bucket to use */
-  readonly accessLoggingBucket?: s3.Bucket;
-  /** Access logging prefix to use */
-  readonly serverAccessLogsPrefix?: string;
-  /** Artifact bucket to use */
-  readonly artifactBucket?: s3.Bucket;
-  /** Output bucket to use */
-  readonly outputBucket?: s3.Bucket | VMImportBucket;
-  /** Prefix for S3 object within bucket */
-  readonly subDirectoryName?: string;
+  /** The encryption key use across*/
+  readonly encryptionKey: kms.Key;
 }
 
 /**
  * The stack for creating a build pipeline.
  *
- * See {@link EmbeddedLinuxPipelineProps} for configration options.
+ * See {@link EmbeddedLinuxCodePipelineProps} for configration options.
  */
-export class EmbeddedLinuxPipelineStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props: EmbeddedLinuxPipelineProps) {
+export class EmbeddedLinuxCodePipelineStack extends cdk.Stack {
+
+  constructor(scope: Construct, id: string, props: EmbeddedLinuxCodePipelineProps) {
     super(scope, id, props);
 
-    /** Set up networking access and EFS FileSystems. */
+    const sourceBase: string = `pipeline-source-${props.projectKind}`;
+    const sourceFileName: string = `source-${props.projectKind}.zip`;
+    const sourceLocalPath: string = `assets/${sourceBase}`;
+    const sourceDestinationKeyPrefix: string = `assets/${sourceBase}`;
 
-    const projectSg = new ec2.SecurityGroup(this, 'BuildProjectSecurityGroup', {
+    /** Set up networking access and EFS FileSystems. */
+    const projectSg = new ec2.SecurityGroup(this, 'EmbeddedLinuxCodePipelineBuildProjectSecurityGroup', {
       vpc: props.vpc,
       description: 'Security Group to allow attaching EFS',
     });
@@ -67,10 +70,9 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
       ec2.Port.tcp(2049),
       'NFS Mount Port'
     );
-
     const efsFileSystem: efs.FileSystem = new efs.FileSystem(
       this,
-      `EmbeddedLinuxPipelineFilesystem`,
+      `EmbeddedLinuxCodePipelineFilesystem`,
       {
         vpc: props.vpc,
         allowAnonymousAccess: true,
@@ -79,20 +81,40 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
     );
     efsFileSystem.connections.allowFrom(projectSg, ec2.Port.tcp(2049));
 
-    let accessLoggingBucket: s3.IBucket;
+    // create the policy & role for the source bucket deployment
+    const sourceBucketDeploymentPolicy = new iam.PolicyDocument({
+      statements: [
+        new iam.PolicyStatement({
+          actions: [
+            'logs:CreateLogGroup',
+            'logs:CreateLogStream',
+            'logs:PutLogEvents',
+          ],
+          resources: [
+            `arn:aws:logs:${this.region}:${this.account}:log-group:/aws/lambda/EmbeddedLinuxCodePipeline-${props.projectKind}-CustomCDKBucketDeployment*"`,
+          ],
+        }),
+      ],
+    });
+    const sourceBucketDeploymentRole = new iam.Role(
+      this,
+      'EmbeddedLinuxCodePipelineBucketDeploymentRole',
+      {
+        assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+        inlinePolicies: { sourceBucketDeploymentPolicy },
+      }
+    );
 
-    if (props.accessLoggingBucket) {
-      accessLoggingBucket = props.accessLoggingBucket;
-    } else {
-      accessLoggingBucket = new s3.Bucket(this, 'ArtifactAccessLogging', {
-        versioned: true,
-        enforceSSL: true,
-        autoDeleteObjects: true,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-      });
-    }
+    // deploy the source to the bucket 
+    const bucketDeployment = new BucketDeployment(this, 'EmbeddedLinuxCodePipelineBucketDeployment', {
+      // Note: Run `npm run zip-data` before deploying this stack!
+      sources: [Source.asset(path.join(__dirname, '..', sourceLocalPath))],
+      destinationBucket: props.sourceBucket,
+      role: sourceBucketDeploymentRole,
+      extract: true,
+      destinationKeyPrefix: sourceDestinationKeyPrefix,
+    });
 
-    let outputBucket: s3.IBucket | VMImportBucket;
     let environmentVariables = {};
     let scriptAsset!: Asset;
 
@@ -101,104 +123,39 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
         path: path.join(__dirname, '../assets/create-ec2-ami.sh'),
       });
 
-      const outputBucketEncryptionKey = new kms.Key(
-        this,
-        'OutputBucketEncryptionKey',
-        {
-          removalPolicy: cdk.RemovalPolicy.DESTROY,
-          enableKeyRotation: true,
-        }
-      );
-
-      if (props.outputBucket) {
-        outputBucket = props.outputBucket;
-      } else {
-        outputBucket = new VMImportBucket(this, 'PipelineOutput', {
-          versioned: true,
-          enforceSSL: true,
-          encryptionKey: outputBucketEncryptionKey,
-          encryptionKeyArn: outputBucketEncryptionKey.keyArn,
-          serverAccessLogsBucket: accessLoggingBucket,
-          serverAccessLogsPrefix: props.serverAccessLogsPrefix,
-          autoDeleteObjects: true,
-          removalPolicy: cdk.RemovalPolicy.DESTROY,
-        });
-      }
       environmentVariables = {
         IMPORT_BUCKET: {
           type: codebuild.BuildEnvironmentVariableType.PLAINTEXT,
-          value: outputBucket.bucketName,
+          value: props.outputBucket.bucketName,
         },
         ROLE_NAME: {
           type: codebuild.BuildEnvironmentVariableType.PLAINTEXT,
-          value: (outputBucket as VMImportBucket).roleName,
+          value: (props.outputBucket as VMImportBucket).roleName,
         },
         SCRIPT_URL: {
           type: codebuild.BuildEnvironmentVariableType.PLAINTEXT,
           value: scriptAsset.s3ObjectUrl,
         },
       };
-    } else {
-      if (props.outputBucket) {
-        outputBucket = props.outputBucket;
-      } else {
-        outputBucket = new s3.Bucket(this, 'PipelineOutput', {
-          versioned: true,
-          enforceSSL: true,
-          serverAccessLogsBucket: accessLoggingBucket,
-          autoDeleteObjects: true,
-          removalPolicy: cdk.RemovalPolicy.DESTROY,
-        });
-      }
     }
 
-    let artifactBucket: s3.IBucket;
-
-    if (props.artifactBucket) {
-      artifactBucket = props.artifactBucket;
-    } else {
-      const encryptionKey = new kms.Key(this, 'PipelineArtifactKey', {
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-        enableKeyRotation: true,
-      });
-      artifactBucket = new s3.Bucket(this, 'PipelineArtifacts', {
-        versioned: true,
-        enforceSSL: true,
-        serverAccessLogsBucket: accessLoggingBucket,
-        encryptionKey,
-        encryption: s3.BucketEncryption.KMS,
-        blockPublicAccess: new s3.BlockPublicAccess(
-          s3.BlockPublicAccess.BLOCK_ALL
-        ),
-        autoDeleteObjects: true,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-      });
-    }
-
-    /** Create our CodePipeline Actions. */
-    const sourceRepo = new SourceRepo(this, 'SourceRepo', {
-      ...props,
-      repoName: props.layerRepoName ?? `layer-repo-${this.stackName}`,
-      kind: props.projectKind ?? ProjectKind.Poky,
-    });
-
-    const sourceOutput = new codepipeline.Artifact('BuildImageSource');
-    const sourceAction = new codepipeline_actions.CodeCommitSourceAction({
-      // trigger: CodeCommitTrigger.NONE,
+    /** Create our CodeCodePipeline Actions. */
+    const sourceOutput = new codepipeline.Artifact('Source');
+    const sourceAction = new codepipeline_actions.S3SourceAction({
       actionName: 'Source',
       output: sourceOutput,
-      repository: sourceRepo.repo,
-      branch: 'main',
-      codeBuildCloneOutput: true,
+      bucket: props.sourceBucket,
+      bucketKey: `${sourceDestinationKeyPrefix}/${sourceFileName}`,
     });
 
     const project = new codebuild.PipelineProject(this, 'EmbeddedLinuxBuildProject', {
+      projectName: `${id}-${props.projectKind}`,
       buildSpec: codebuild.BuildSpec.fromSourceFilename('build.buildspec.yml'),
       environment: {
         computeType: codebuild.ComputeType.X2_LARGE,
         buildImage: codebuild.LinuxBuildImage.fromEcrRepository(
-          props.imageRepo,
-          props.imageTag
+          props.ecrRepository,
+          props.ecrRepositoryImageTag
         ),
         privileged: true,
         environmentVariables,
@@ -215,19 +172,21 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
       ],
       logging: {
         cloudWatch: {
-          logGroup: new logs.LogGroup(this, 'PipelineBuildLogs', {
+          logGroup: new logs.LogGroup(this, 'EmbeddedLinuxBuildProjectLogs', {
             retention: logs.RetentionDays.TEN_YEARS,
           }),
         },
       },
+      encryptionKey: props.encryptionKey,
     });
+    project.node.addDependency(bucketDeployment);
 
     if (props.buildPolicyAdditions) {
       props.buildPolicyAdditions.map((p) => project.addToRolePolicy(p));
     }
 
     if (props.projectKind && props.projectKind == ProjectKind.PokyAmi) {
-      outputBucket.grantReadWrite(project);
+      props.outputBucket.grantReadWrite(project);
       project.addToRolePolicy(this.addVMExportPolicy());
 
       project.addToRolePolicy(
@@ -241,7 +200,7 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
       );
       //Permissions for BackUp to S3
       project.addToRolePolicy(
-        this.addAMIS3BackupPolicy(outputBucket.bucketArn)
+        this.addAMIS3BackupPolicy(props.outputBucket.bucketArn)
       );
       project.addToRolePolicy(this.addAMIEC2EBSBackupPolicy(this.region));
       project.addToRolePolicy(this.addAMIEBSBackupPolicy(this.region));
@@ -259,24 +218,24 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
 
     let artifactAction: codepipeline_actions.S3DeployAction;
 
-    if (props.subDirectoryName) {
+    if (props.artifactOutputObjectKey) {
       artifactAction = new codepipeline_actions.S3DeployAction({
         actionName: 'Artifact',
         input: buildOutput,
-        bucket: outputBucket,
-        objectKey: props.subDirectoryName,
+        bucket: props.outputBucket,
+        objectKey: props.artifactOutputObjectKey,
       });
     } else {
       artifactAction = new codepipeline_actions.S3DeployAction({
         actionName: 'Artifact',
         input: buildOutput,
-        bucket: outputBucket,
+        bucket: props.outputBucket,
       });
     }
 
-    /** Here we create the logic to check for presence of ECR image on the CodePipeline automatic triggering upon resource creation,
+    /** Here we create the logic to check for presence of ECR image on the CodeCodePipeline automatic triggering upon resource creation,
      * and stop the execution if the image does not exist.  */
-    const fnOnPipelineCreate = new lambda.Function(
+    const fnOnCodePipelineCreate = new lambda.Function(
       this,
       'OSImageCheckOnStart',
       {
@@ -291,9 +250,9 @@ codepipeline_client = boto3.client('codepipeline')
 
 def handler(event, context):
   print("Received event: " + json.dumps(event, indent=2))
-  response = ecr_client.describe_images(repositoryName='${props.imageRepo.repositoryName}', filter={'tagStatus': 'TAGGED'})
+  response = ecr_client.describe_images(repositoryName='${props.ecrRepository.repositoryName}', filter={'tagStatus': 'TAGGED'})
   for i in response['imageDetails']:
-    if '${props.imageTag}' in i['imageTags']:
+    if '${props.ecrRepositoryImageTag}' in i['ecrRepositoryImageTags']:
       break
   else:
     print('OS image not found. Stopping execution.')
@@ -307,25 +266,26 @@ def handler(event, context):
       }
     );
 
-    const pipelineCreateRule = new events.Rule(this, 'OnPipelineStartRule', {
+    const pipelineCreateRule = new events.Rule(this, 'OnCodePipelineStartRule', {
       eventPattern: {
-        detailType: ['CodePipeline Pipeline Execution State Change'],
+        detailType: ['CodeCodePipeline CodePipeline Execution State Change'],
         source: ['aws.codepipeline'],
         detail: {
           state: ['STARTED'],
           'execution-trigger': {
-            'trigger-type': ['CreatePipeline'],
+            'trigger-type': ['CreateCodePipeline'],
           },
         },
       },
     });
     pipelineCreateRule.addTarget(
-      new targets.LambdaFunction(fnOnPipelineCreate)
+      new targets.LambdaFunction(fnOnCodePipelineCreate)
     );
 
-    /** Now create the actual Pipeline */
-    const pipeline = new codepipeline.Pipeline(this, 'EmbeddedLinuxPipeline', {
-      artifactBucket,
+    /** Now create the actual CodePipeline */
+    const pipeline = new codepipeline.Pipeline(this, 'EmbeddedLinuxCodePipeline', {
+      pipelineName: `${id}-${props.projectKind}`,
+      artifactBucket: props.artifactBucket,
       restartExecutionOnUpdate: true,
       pipelineType: codepipeline.PipelineType.V1,
       stages: [
@@ -343,24 +303,25 @@ def handler(event, context):
         },
       ],
     });
+    pipeline.node.addDependency(project);
 
-    const stopPipelinePolicy = new iam.PolicyStatement({
-      actions: ['codepipeline:StopPipelineExecution'],
+    const stopCodePipelinePolicy = new iam.PolicyStatement({
+      actions: ['codepipeline:StopCodePipelineExecution'],
       resources: [pipeline.pipelineArn],
     });
 
     const ecrPolicy = new iam.PolicyStatement({
       actions: ['ecr:DescribeImages'],
-      resources: [props.imageRepo.repositoryArn],
+      resources: [props.ecrRepository.repositoryArn],
     });
-    fnOnPipelineCreate.role?.attachInlinePolicy(
+    fnOnCodePipelineCreate.role?.attachInlinePolicy(
       new iam.Policy(this, 'CheckOSAndStop', {
-        statements: [stopPipelinePolicy, ecrPolicy],
+        statements: [stopCodePipelinePolicy, ecrPolicy],
       })
     );
 
     new cdk.CfnOutput(this, 'BuildOutput', {
-      value: outputBucket.bucketArn,
+      value: props.outputBucket.bucketArn,
       description: 'The output bucket of this pipeline.',
     });
   }
@@ -392,6 +353,7 @@ def handler(event, context):
       resources: [artifactBucketArn, `${artifactBucketArn}/*`],
     });
   }
+
   private addAMIEBSBackupPolicy(region: string): iam.PolicyStatement {
     return new iam.PolicyStatement({
       actions: [
@@ -407,7 +369,10 @@ def handler(event, context):
 
   private addAMIBackupPolicy(): iam.PolicyStatement {
     return new iam.PolicyStatement({
-      actions: ['ec2:DescribeStoreImageTasks', 'ec2:GetEbsEncryptionByDefault'],
+      actions: [
+        'ec2:DescribeStoreImageTasks',
+        'ec2:GetEbsEncryptionByDefault'
+      ],
       resources: ['*'],
     });
   }

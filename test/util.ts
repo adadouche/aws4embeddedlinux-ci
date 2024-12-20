@@ -15,3 +15,8 @@ export function normalizedTemplateFromStack(stack: cdk.Stack): Template {
 
   return templateWithConstKeys;
 }
+
+export const DEFAULT_ENV = {
+  account: '111111111111',
+  region: 'eu-central-1',
+};

@@ -9,37 +9,40 @@ import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as  ec2 from 'aws-cdk-lib/aws-ec2';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as kms from 'aws-cdk-lib/aws-kms';
 
 /**
  * Properties to allow customizing the build.
  */
-export interface EmbeddedLinuxCodebuildProjectProps extends cdk.StackProps {
+export interface EmbeddedLinuxCodeBuildProjectProps extends cdk.StackProps {
   /** ECR Repository where the Build Host Image resides. */
-  readonly imageRepo: ecr.IRepository;
+  readonly ecrRepository: ecr.IRepository;
   /** Tag for the Build Host Image */
-  readonly imageTag?: string;
+  readonly ecrRepositoryImageTag: string;
   /** VPC where the networking setup resides. */
   readonly vpc: ec2.IVpc;
   /** Additional policy statements to add to the build project. */
   readonly buildPolicyAdditions?: iam.PolicyStatement[];
+  /** The encryption key use across*/
+  readonly encryptionKey: kms.Key;
 }
 
 /**
  * The stack for creating a build pipeline.
  *
- * See {@link EmbeddedLinuxCodebuildProjectProps} for configration options.
+ * See {@link EmbeddedLinuxCodeBuildProjectProps} for configration options.
  */
-export class EmbeddedLinuxCodebuildProjectStack extends cdk.Stack {
+export class EmbeddedLinuxCodeBuildProjectStack extends cdk.Stack {
   constructor(
     scope: Construct,
     id: string,
-    props: EmbeddedLinuxCodebuildProjectProps
+    props: EmbeddedLinuxCodeBuildProjectProps
   ) {
     super(scope, id, props);
 
     /** Set up networking access and EFS FileSystems. */
 
-    const projectSg = new ec2.SecurityGroup(this, 'BuildProjectSecurityGroup', {
+    const projectSg = new ec2.SecurityGroup(this, 'EmbeddedLinuxCodeBuildProjectSecurityGroup', {
       vpc: props.vpc,
       description: 'Security Group to allow attaching EFS',
     });
@@ -51,7 +54,7 @@ export class EmbeddedLinuxCodebuildProjectStack extends cdk.Stack {
 
     const efsFileSystem: efs.FileSystem = new efs.FileSystem(
       this,
-      `EmbeddedLinuxPipelineFilesystem`,
+      `EmbeddedLinuxCodeBuildProjectFilesystem`,
       {
         vpc: props.vpc,
         allowAnonymousAccess: true,
@@ -60,9 +63,8 @@ export class EmbeddedLinuxCodebuildProjectStack extends cdk.Stack {
     );
     efsFileSystem.connections.allowFrom(projectSg, ec2.Port.tcp(2049));
 
-
     /** Create our CodeBuild Project. */
-    const project = new codebuild.Project(this, 'EmbeddedLinuxCodebuildProject', {
+    const project = new codebuild.Project(this, 'EmbeddedLinuxCodeBuildProject', {
       buildSpec: codebuild.BuildSpec.fromObject({
         version: '0.2',
         phases: {
@@ -78,8 +80,8 @@ export class EmbeddedLinuxCodebuildProjectStack extends cdk.Stack {
       environment: {
         computeType: codebuild.ComputeType.X2_LARGE,
         buildImage: codebuild.LinuxBuildImage.fromEcrRepository(
-          props.imageRepo,
-          props.imageTag
+          props.ecrRepository,
+          props.ecrRepositoryImageTag
         ),
         privileged: true,
       },
@@ -95,11 +97,12 @@ export class EmbeddedLinuxCodebuildProjectStack extends cdk.Stack {
       ],
       logging: {
         cloudWatch: {
-          logGroup: new logs.LogGroup(this, 'PipelineBuildLogs', {
+          logGroup: new logs.LogGroup(this, 'EmbeddedLinuxCodeBuildProjectLogs', {
             retention: logs.RetentionDays.TEN_YEARS,
           }),
         },
       },
+      encryptionKey: props.encryptionKey,
     });
 
     if (props.buildPolicyAdditions) {
@@ -116,7 +119,7 @@ export class EmbeddedLinuxCodebuildProjectStack extends cdk.Stack {
      * and stop the execution if the image does not exist.  */
     const fnOnPipelineCreate = new lambda.Function(
       this,
-      'OSImageCheckOnStart',
+      'EmbeddedLinuxCodeBuildProjectOSImageCheckOnStart',
       {
         runtime: lambda.Runtime.PYTHON_3_10,
         handler: 'index.handler',
@@ -129,9 +132,9 @@ codepipeline_client = boto3.client('codepipeline')
 
 def handler(event, context):
   print("Received event: " + json.dumps(event, indent=2))
-  response = ecr_client.describe_images(repositoryName='${props.imageRepo.repositoryName}', filter={'tagStatus': 'TAGGED'})
+  response = ecr_client.describe_images(repositoryName='${props.ecrRepository.repositoryName}', filter={'tagStatus': 'TAGGED'})
   for i in response['imageDetails']:
-    if '${props.imageTag}' in i['imageTags']:
+    if '${props.ecrRepositoryImageTag}' in i['imageTags']:
       break
   else:
     print('OS image not found. Stopping execution.')
@@ -145,7 +148,7 @@ def handler(event, context):
       }
     );
 
-    const pipelineCreateRule = new events.Rule(this, 'OnPipelineStartRule', {
+    const pipelineCreateRule = new events.Rule(this, 'EmbeddedLinuxCodeBuildProjectOnPipelineStartRule', {
       eventPattern: {
         detailType: ['CodePipeline Pipeline Execution State Change'],
         source: ['aws.codepipeline'],

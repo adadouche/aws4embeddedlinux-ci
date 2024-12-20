@@ -16,3 +16,5 @@ cdk.context.json
 
 # Ignore Mac DS_Store files
 **/.DS_Store
+
+assets
