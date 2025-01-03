@@ -687,29 +687,29 @@ exports[`EmbeddedLinuxCodePipelineStack Snapshot 1`] = `
       },
       "Type": "AWS::IAM::Policy",
     },
-    "EmbeddedLinuxCodePipelineFilesystem0C39225A": {
+    "EmbeddedLinuxCodePipelineFileSystemB969CAF1": {
       "DeletionPolicy": "Delete",
       "Properties": {
         "Encrypted": true,
         "FileSystemTags": [
           {
             "Key": "Name",
-            "Value": "MyTestStack/EmbeddedLinuxCodePipelineFilesystem",
+            "Value": "MyTestStack/EmbeddedLinuxCodePipelineFileSystem",
           },
         ],
       },
       "Type": "AWS::EFS::FileSystem",
       "UpdateReplacePolicy": "Delete",
     },
-    "EmbeddedLinuxCodePipelineFilesystemEfsMountTarget10BBC1302": {
+    "EmbeddedLinuxCodePipelineFileSystemEfsMountTarget1CA0AA616": {
       "Properties": {
         "FileSystemId": {
-          "Ref": "EmbeddedLinuxCodePipelineFilesystem0C39225A",
+          "Ref": "EmbeddedLinuxCodePipelineFileSystemB969CAF1",
         },
         "SecurityGroups": [
           {
             "Fn::GetAtt": [
-              "EmbeddedLinuxCodePipelineFilesystemEfsSecurityGroupB0EFE3D0",
+              "EmbeddedLinuxCodePipelineFileSystemEfsSecurityGroup35971CF1",
               "GroupId",
             ],
           },
@@ -720,15 +720,15 @@ exports[`EmbeddedLinuxCodePipelineStack Snapshot 1`] = `
       },
       "Type": "AWS::EFS::MountTarget",
     },
-    "EmbeddedLinuxCodePipelineFilesystemEfsMountTarget29E41A5F0": {
+    "EmbeddedLinuxCodePipelineFileSystemEfsMountTarget24B554859": {
       "Properties": {
         "FileSystemId": {
-          "Ref": "EmbeddedLinuxCodePipelineFilesystem0C39225A",
+          "Ref": "EmbeddedLinuxCodePipelineFileSystemB969CAF1",
         },
         "SecurityGroups": [
           {
             "Fn::GetAtt": [
-              "EmbeddedLinuxCodePipelineFilesystemEfsSecurityGroupB0EFE3D0",
+              "EmbeddedLinuxCodePipelineFileSystemEfsSecurityGroup35971CF1",
               "GroupId",
             ],
           },
@@ -739,15 +739,15 @@ exports[`EmbeddedLinuxCodePipelineStack Snapshot 1`] = `
       },
       "Type": "AWS::EFS::MountTarget",
     },
-    "EmbeddedLinuxCodePipelineFilesystemEfsMountTarget3E5094CA0": {
+    "EmbeddedLinuxCodePipelineFileSystemEfsMountTarget3FAD334C7": {
       "Properties": {
         "FileSystemId": {
-          "Ref": "EmbeddedLinuxCodePipelineFilesystem0C39225A",
+          "Ref": "EmbeddedLinuxCodePipelineFileSystemB969CAF1",
         },
         "SecurityGroups": [
           {
             "Fn::GetAtt": [
-              "EmbeddedLinuxCodePipelineFilesystemEfsSecurityGroupB0EFE3D0",
+              "EmbeddedLinuxCodePipelineFileSystemEfsSecurityGroup35971CF1",
               "GroupId",
             ],
           },
@@ -758,9 +758,9 @@ exports[`EmbeddedLinuxCodePipelineStack Snapshot 1`] = `
       },
       "Type": "AWS::EFS::MountTarget",
     },
-    "EmbeddedLinuxCodePipelineFilesystemEfsSecurityGroupB0EFE3D0": {
+    "EmbeddedLinuxCodePipelineFileSystemEfsSecurityGroup35971CF1": {
       "Properties": {
-        "GroupDescription": "MyTestStack/EmbeddedLinuxCodePipelineFilesystem/EfsSecurityGroup",
+        "GroupDescription": "MyTestStack/EmbeddedLinuxCodePipelineFileSystem/EfsSecurityGroup",
         "SecurityGroupEgress": [
           {
             "CidrIp": "0.0.0.0/0",
@@ -771,7 +771,7 @@ exports[`EmbeddedLinuxCodePipelineStack Snapshot 1`] = `
         "Tags": [
           {
             "Key": "Name",
-            "Value": "MyTestStack/EmbeddedLinuxCodePipelineFilesystem",
+            "Value": "MyTestStack/EmbeddedLinuxCodePipelineFileSystem",
           },
         ],
         "VpcId": {
@@ -780,13 +780,13 @@ exports[`EmbeddedLinuxCodePipelineStack Snapshot 1`] = `
       },
       "Type": "AWS::EC2::SecurityGroup",
     },
-    "EmbeddedLinuxCodePipelineFilesystemEfsSecurityGroupfromMyTestStackEmbeddedLinuxCodePipelineBuildProjectSecurityGroupEA21757F20490329A776": {
+    "EmbeddedLinuxCodePipelineFileSystemEfsSecurityGroupfromMyTestStackEmbeddedLinuxCodePipelineBuildProjectSecurityGroupEA21757F2049FC93D5D2": {
       "Properties": {
         "Description": "from MyTestStackEmbeddedLinuxCodePipelineBuildProjectSecurityGroupEA21757F:2049",
         "FromPort": 2049,
         "GroupId": {
           "Fn::GetAtt": [
-            "EmbeddedLinuxCodePipelineFilesystemEfsSecurityGroupB0EFE3D0",
+            "EmbeddedLinuxCodePipelineFileSystemEfsSecurityGroup35971CF1",
             "GroupId",
           ],
         },
@@ -1122,7 +1122,7 @@ def handler(event, context):
                 "",
                 [
                   {
-                    "Ref": "EmbeddedLinuxCodePipelineFilesystem0C39225A",
+                    "Ref": "EmbeddedLinuxCodePipelineFileSystemB969CAF1",
                   },
                   ".efs.eu-central-1.amazonaws.com:/",
                 ],
