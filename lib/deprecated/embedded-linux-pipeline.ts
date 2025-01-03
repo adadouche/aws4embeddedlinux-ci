@@ -22,6 +22,7 @@ import {
 import { IRepository } from "aws-cdk-lib/aws-ecr";
 
 import {
+  ISecurityGroup,
   IVpc,
   Peer,
   Port,
@@ -62,8 +63,6 @@ export interface EmbeddedLinuxPipelineProps extends cdk.StackProps {
   readonly outputBucket?: s3.Bucket | VMImportBucket;
   /** Prefix for S3 object within bucket */
   readonly subDirectoryName?: string;
-  /** EFS Filesystem**/
-  readonly efsFileSystem?: efs.FileSystem;
 }
 
 /**
@@ -105,6 +104,9 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
     );
     efsFileSystem.connections.allowFrom(projectSg, Port.tcp(2049));
 
+    let outputBucket: s3.IBucket | VMImportBucket;
+    let environmentVariables = {};
+    let scriptAsset!: Asset;
     let accessLoggingBucket: s3.IBucket;
 
     if (props.accessLoggingBucket) {
@@ -117,10 +119,6 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
         removalPolicy: RemovalPolicy.DESTROY,
       });
     }
-
-    let outputBucket: s3.IBucket | VMImportBucket;
-    let environmentVariables = {};
-    let scriptAsset!: Asset;
 
     if (props.projectKind && props.projectKind == ProjectKind.PokyAmi) {
       scriptAsset = new Asset(this, "CreateAMIScript", {
@@ -465,7 +463,6 @@ def handler(event, context):
       resources: [artifactBucketArn, `${artifactBucketArn}/*`],
     });
   }
-
   private addAMIEBSBackupPolicy(region: string): iam.PolicyStatement {
     return new iam.PolicyStatement({
       actions: [
