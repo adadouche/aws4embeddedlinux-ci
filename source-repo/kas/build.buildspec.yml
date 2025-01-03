@@ -11,23 +11,30 @@ phases:
   pre_build:
     run-as: root
     commands:
+      - echo "Pre build started - [$(date '+%F %H:%M:%S')]"
       - mkdir -p /nfs/sstate-cache && chown -R yoctouser /nfs/sstate-cache
       - mkdir -p /nfs/downloads && chown -R yoctouser /nfs/downloads
+      - mkdir -p /nfs/build-output && chown -R yoctouser /nfs/build-output
       - chmod -R 755 /nfs/sstate-cache
       - chmod -R 755 /nfs/downloads
+      - chmod -R 755 /nfs/build-output
       - |
           if [[ -n "$PURGE_EFS" ]] ; then
             echo "Starting EFS purge."
             rm -rvf /nfs/downloads/*
             rm -rvf /nfs/sstate-cache/*
+            rm -rvf /nfs/build-output/*
           fi
+      - echo "Pre build completed - [$(date '+%F %H:%M:%S')]"
   build:
     commands:
-      - echo Build started on `date`
+      - echo "Build started - [$(date '+%F %H:%M:%S')]"
       - export KAS_WORK_DIR=$TMP_DIR
       - kas build kas.yml
+      - echo "Build completed - [$(date '+%F %H:%M:%S')]"
   post_build:
     commands:
+      - echo "Post build statred - [$(date '+%F %H:%M:%S')]"
       # Prune old files in our EFS Mounts, that are not accessed by this or any build within 30 days
       - find /nfs/sstate-cache -atime +30 -type f -delete
       # only delete empty dirs
@@ -36,6 +43,7 @@ phases:
       - find /nfs/downloads -atime +30 -type f -delete
       # only delete empty dirs
       - find /nfs/downloads -atime +30 -type d -empty -delete
+      - echo "Post build completed - [$(date '+%F %H:%M:%S')]"
 
 artifacts:
   discard-paths: true
