@@ -1,11 +1,11 @@
-import { PipelineNetworkStack } from '../../lib/deprecated/network';
-import { Annotations, Match } from 'aws-cdk-lib/assertions';
-import { App, Aspects, Stack } from 'aws-cdk-lib';
-import { AwsSolutionsChecks } from 'cdk-nag';
+import { PipelineNetworkStack } from "../../lib/deprecated/network";
+import { Annotations, Match } from "aws-cdk-lib/assertions";
+import { App, Aspects, Stack } from "aws-cdk-lib";
+import { AwsSolutionsChecks } from "cdk-nag";
 
-describe('Pipeline Networking cdk-nag AwsSolutions Pack', () => {
+describe("Pipeline Networking cdk-nag AwsSolutions Pack", () => {
   const props = {
-    env: { account: '111111111111', region: 'eu-central-1' },
+    env: { account: "111111111111", region: "eu-central-1" },
   };
   let stack: Stack;
   let app: App;
@@ -14,25 +14,25 @@ describe('Pipeline Networking cdk-nag AwsSolutions Pack', () => {
   beforeAll(() => {
     // GIVEN
     app = new App();
-    stack = new PipelineNetworkStack(app, 'PipelineNetworkStack', props);
+    stack = new PipelineNetworkStack(app, "PipelineNetworkStack", props);
 
     // WHEN
     Aspects.of(stack).add(new AwsSolutionsChecks({ verbose: true }));
   });
 
   // THEN
-  test('No unsuppressed Warnings', () => {
+  test("No unsuppressed Warnings", () => {
     const warnings = Annotations.fromStack(stack).findWarning(
-      '*',
-      Match.stringLikeRegexp('AwsSolutions-.*')
+      "*",
+      Match.stringLikeRegexp("AwsSolutions-.*"),
     );
     expect(warnings).toHaveLength(0);
   });
 
-  test('No unsuppressed Errors', () => {
+  test("No unsuppressed Errors", () => {
     const errors = Annotations.fromStack(stack).findError(
-      '*',
-      Match.stringLikeRegexp('AwsSolutions-.*')
+      "*",
+      Match.stringLikeRegexp("AwsSolutions-.*"),
     );
     expect(errors).toHaveLength(0);
   });
