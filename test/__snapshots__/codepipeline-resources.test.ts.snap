@@ -2,6 +2,53 @@
 
 exports[`PipelineResourcesStack Snapshot 1`] = `
 {
+  "Outputs": {
+    "OutputPipelineResourcesAccessLoggingBucket": {
+      "Description": "The access loggin bucket.",
+      "Export": {
+        "Name": "accessLoggingBucket",
+      },
+      "Value": {
+        "Ref": "PipelineResourcesAccessLoggingBucket66A74BE5",
+      },
+    },
+    "OutputPipelineResourcesArtifactBucket": {
+      "Description": "The artifact bucket.",
+      "Export": {
+        "Name": "artifactBucket",
+      },
+      "Value": {
+        "Ref": "PipelineResourcesArtifactBucketFF61EB98",
+      },
+    },
+    "OutputPipelineResourcesOutputBucket": {
+      "Description": "The output bucket.",
+      "Export": {
+        "Name": "outputBucket",
+      },
+      "Value": {
+        "Ref": "PipelineResourcesOutputBucketA2144F25",
+      },
+    },
+    "OutputPipelineResourcesOutputVMImportBuckett": {
+      "Description": "The output VM import bucket.",
+      "Export": {
+        "Name": "outputVMImportBucket",
+      },
+      "Value": {
+        "Ref": "PipelineResourcesOutputVMImportBucket410130C7",
+      },
+    },
+    "OutputPipelineResourcesSourceBucket": {
+      "Description": "The source loggin bucket.",
+      "Export": {
+        "Name": "sourceBucket",
+      },
+      "Value": {
+        "Ref": "PipelineResourcesSourceBucket1FA488F5",
+      },
+    },
+  },
   "Parameters": {
     "BootstrapVersion": {
       "Default": "/cdk-bootstrap/hnb659fds/version",
