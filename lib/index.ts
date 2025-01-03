@@ -1,43 +1,47 @@
-import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as s3 from "aws-cdk-lib/aws-s3";
 
-export * from './codebuild-embedded-linux';
-export * from './codepipeline-base-image';
-export * from './codepipeline-embedded-linux';
-export * from './codepipeline-resources';
+export * from "./codebuild-embedded-linux";
+export * from "./codepipeline-embedded-linux-base-image";
+export * from "./codepipeline-embedded-linux";
+export * from "./codepipeline-resources";
 
-export * from './deprecated/network';
-export * from './deprecated/build-image-data';
-export * from './deprecated/build-image-repo';
-export * from './deprecated/build-image-pipeline';
-export * from './deprecated/embedded-linux-pipeline';
-export * from './deprecated/embedded-linux-codebuild-project';
-export * from './deprecated/constructs/source-repo';
-
+export * from "./deprecated/network";
+export * from "./deprecated/build-image-data";
+export * from "./deprecated/build-image-repo";
+export * from "./deprecated/build-image-pipeline";
+export * from "./deprecated/embedded-linux-pipeline";
+export * from "./deprecated/embedded-linux-codebuild-project";
+export * from "./deprecated/constructs/source-repo";
 
 export function isBucketVersioned(bucket: s3.Bucket | s3.IBucket) {
-    const bucketCfn: s3.CfnBucket = bucket.node.defaultChild as s3.CfnBucket;
-    if (bucketCfn.versioningConfiguration && (bucketCfn.versioningConfiguration as any).status != "Enabled") {
-        return true;
-    }
-    return false;
+  const bucketCfn: s3.CfnBucket = bucket.node.defaultChild as s3.CfnBucket;
+  if (
+    bucketCfn.versioningConfiguration &&
+    (
+      bucketCfn.versioningConfiguration as s3.CfnBucket.VersioningConfigurationProperty
+    ).status != "Enabled"
+  ) {
+    return true;
+  }
+  return false;
 }
 
 /**
  * The kind of project built.
  */
 export enum ProjectKind {
-    /** Build core-image-minimal from poky. */
-    Poky = 'poky',
-    /** Build the Qemu meta-aws Demonstration Distribution. */
-    MetaAwsDemo = 'meta-aws-demo',
-    /** Build an EC2 AMI */
-    PokyAmi = 'poky-ami',
-    /** Build an kas based image */
-    Kas = 'kas',
-    /** Build an Renesas image */
-    Renesas = 'renesas',
-    /** Build an IMX image using NXP layers. */
-    NxpImx = 'nxp-imx',
-    /** Build no pipeline, just CodeBuild project to connect with GitHub actions. */
-    CodeBuild = 'codebuild',
+  /** Build core-image-minimal from poky. */
+  Poky = "poky",
+  /** Build the Qemu meta-aws Demonstration Distribution. */
+  MetaAwsDemo = "meta-aws-demo",
+  /** Build an EC2 AMI */
+  PokyAmi = "poky-ami",
+  /** Build an kas based image */
+  Kas = "kas",
+  /** Build an Renesas image */
+  Renesas = "renesas",
+  /** Build an IMX image using NXP layers. */
+  NxpImx = "nxp-imx",
+  /** Build no pipeline, just CodeBuild project to connect with GitHub actions. */
+  CodeBuild = "codebuild",
 }

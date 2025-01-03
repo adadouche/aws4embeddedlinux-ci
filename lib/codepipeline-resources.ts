@@ -1,20 +1,18 @@
-import * as path from 'path';
+import * as cdk from "aws-cdk-lib";
+import { Construct } from "constructs";
+import * as s3 from "aws-cdk-lib/aws-s3";
+import * as ecr from "aws-cdk-lib/aws-ecr";
+import * as kms from "aws-cdk-lib/aws-kms";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as logs from "aws-cdk-lib/aws-logs";
 
-import * as cdk from 'aws-cdk-lib';
-import { Construct } from 'constructs';
-import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as ecr from 'aws-cdk-lib/aws-ecr';
-import * as kms from 'aws-cdk-lib/aws-kms';
-import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import * as logs from 'aws-cdk-lib/aws-logs';
-
-import { VMImportBucket } from './vm-import-bucket';
+import { VMImportBucket } from "./vm-import-bucket";
 /**
  * Select options for the {@link PipelineResourcesStack}.
  */
 export interface PipelineResourcesProps extends cdk.StackProps {
   /** The resource prefix*/
-  readonly resoruce_prefix: string;
+  readonly resource_prefix: string;
   /** The ecr repository name - if not provided then the name will be '{prefix}-{account}-{region}-repo'*/
   readonly ecrRepositoryName?: string;
   /** The artifact bucket name - if not provided then the name will be '{prefix}-{account}-{region}-artifact'*/
@@ -48,56 +46,78 @@ export class PipelineResourcesStack extends cdk.Stack {
   /** The output vm import bucket*/
   public readonly outputVMImportBucket: VMImportBucket;
   /** The encryption key use across*/
-  encryptionKey: kms.Key;
+  public readonly encryptionKey: kms.Key;
 
   constructor(scope: Construct, id: string, props: PipelineResourcesProps) {
     super(scope, id, props);
 
-    const ecrRepositoryName = (props.ecrRepositoryName ? props.ecrRepositoryName : `${props.resoruce_prefix}-${props.env?.account}-${props.env?.region}-repo`.toLowerCase());
-    const artifactBucketName = (props.artifactBucketName ? props.artifactBucketName : `${props.resoruce_prefix}-${props.env?.account}-${props.env?.region}-artifact`.toLowerCase());
-    const sourceBucketName = (props.sourceBucketName ? props.sourceBucketName : `${props.resoruce_prefix}-${props.env?.account}-${props.env?.region}-source`.toLowerCase());
-    const outputBucketName = (props.outputBucketName ? props.outputBucketName : `${props.resoruce_prefix}-${props.env?.account}-${props.env?.region}-output`.toLowerCase());
-    const outputVMImportBucketName = (props.outputVMImportBucketName ? props.outputVMImportBucketName : `${props.resoruce_prefix}-${props.env?.account}-${props.env?.region}-output-vm`.toLowerCase());
-    const accessLoggingBucketName = (props.sourceBucketName ? props.sourceBucketName : `${props.resoruce_prefix}-${props.env?.account}-${props.env?.region}-access-logs`.toLowerCase());
+    const ecrRepositoryName = props.ecrRepositoryName
+      ? props.ecrRepositoryName
+      : `${props.resource_prefix}-${cdk.Stack.of(this).account}-${cdk.Stack.of(this).region}-repo`.toLowerCase();
+    const artifactBucketName = props.artifactBucketName
+      ? props.artifactBucketName
+      : `${props.resource_prefix}-${cdk.Stack.of(this).account}-${cdk.Stack.of(this).region}-artifact`.toLowerCase();
+    const sourceBucketName = props.sourceBucketName
+      ? props.sourceBucketName
+      : `${props.resource_prefix}-${cdk.Stack.of(this).account}-${cdk.Stack.of(this).region}-source`.toLowerCase();
+    const outputBucketName = props.outputBucketName
+      ? props.outputBucketName
+      : `${props.resource_prefix}-${cdk.Stack.of(this).account}-${cdk.Stack.of(this).region}-output`.toLowerCase();
+    const outputVMImportBucketName = props.outputVMImportBucketName
+      ? props.outputVMImportBucketName
+      : `${props.resource_prefix}-${cdk.Stack.of(this).account}-${cdk.Stack.of(this).region}-output-vm`.toLowerCase();
+    const accessLoggingBucketName = props.sourceBucketName
+      ? props.sourceBucketName
+      : `${props.resource_prefix}-${cdk.Stack.of(this).account}-${cdk.Stack.of(this).region}-access-logs`.toLowerCase();
 
     // We will create a VPC with 3 Private and Public subnets for AWS
     // Resources that have network interfaces (e.g. Connecting and EFS
     // Filesystem to a CodeBuild Project).
-    this.vpc = new ec2.Vpc(this, 'PipelineResourceVpc', {
-      ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/16'),
+    this.vpc = new ec2.Vpc(this, "PipelineResourcesVpc", {
+      ipAddresses: ec2.IpAddresses.cidr("10.0.0.0/16"),
     });
 
-    new ec2.FlowLog(this, 'PipelineResourceVPCFlowLogs', {
+    new ec2.FlowLog(this, "PipelineResourcesVPCFlowLogs", {
       resourceType: ec2.FlowLogResourceType.fromVpc(this.vpc),
       destination: ec2.FlowLogDestination.toCloudWatchLogs(
-        new logs.LogGroup(this, 'PipelineResourceVPCFlowLogGroup', {
-          retention: logs.RetentionDays.TEN_YEARS,
-        })
+        new logs.LogGroup(this, "PipelineResourcesVPCFlowLogGroup", {
+          logGroupName: `${id}-PipelineResourcesVPCFlowLogGroup`,
+          retention: logs.RetentionDays.ONE_YEAR,
+          removalPolicy: cdk.RemovalPolicy.DESTROY,
+        }),
       ),
     });
 
-    this.ecrRepository = new ecr.Repository(this, 'PipelineResourceECRRepository', {
-      repositoryName: ecrRepositoryName,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      emptyOnDelete: true,
-    });
+    this.ecrRepository = new ecr.Repository(
+      this,
+      "PipelineResourcesECRRepository",
+      {
+        repositoryName: ecrRepositoryName,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+        emptyOnDelete: true,
+      },
+    );
 
-    this.encryptionKey = new kms.Key(this, 'PipelineResourceArtifactKey', {
+    this.encryptionKey = new kms.Key(this, "PipelineResourcesArtifactKey", {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       enableKeyRotation: true,
     });
 
     // Create a bucket, then allow a deployment Lambda to upload to it.
-    this.accessLoggingBucket = new s3.Bucket(this, 'PipelineResourceAccessLoggingBucket', {
-      bucketName: accessLoggingBucketName,
-      versioned: true,
-      enforceSSL: true,
-      autoDeleteObjects: true,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      encryptionKey: this.encryptionKey,
-    });
+    this.accessLoggingBucket = new s3.Bucket(
+      this,
+      "PipelineResourcesAccessLoggingBucket",
+      {
+        bucketName: accessLoggingBucketName,
+        versioned: true,
+        enforceSSL: true,
+        autoDeleteObjects: true,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+        encryptionKey: this.encryptionKey,
+      },
+    );
 
-    this.sourceBucket = new s3.Bucket(this, 'PipelineResourceSourceBucket', {
+    this.sourceBucket = new s3.Bucket(this, "PipelineResourcesSourceBucket", {
       bucketName: sourceBucketName,
       versioned: true,
       enforceSSL: true,
@@ -108,20 +128,22 @@ export class PipelineResourcesStack extends cdk.Stack {
       serverAccessLogsPrefix: "source-bucket",
     });
 
-    this.artifactBucket = new s3.Bucket(this, 'PipelineResourceArtifactBucket', {
-      bucketName: artifactBucketName,
-      versioned: true,
-      enforceSSL: true,
-      autoDeleteObjects: true,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      encryptionKey: this.encryptionKey,
-      serverAccessLogsBucket: this.accessLoggingBucket,
-      serverAccessLogsPrefix: "artifact-bucket",
-    });
+    this.artifactBucket = new s3.Bucket(
+      this,
+      "PipelineResourcesArtifactBucket",
+      {
+        bucketName: artifactBucketName,
+        versioned: true,
+        enforceSSL: true,
+        autoDeleteObjects: true,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+        encryptionKey: this.encryptionKey,
+        serverAccessLogsBucket: this.accessLoggingBucket,
+        serverAccessLogsPrefix: "artifact-bucket",
+      },
+    );
 
-
-
-    this.outputBucket = new s3.Bucket(this, 'PipelineResourceOutputBucket', {
+    this.outputBucket = new s3.Bucket(this, "PipelineResourcesOutputBucket", {
       bucketName: outputBucketName,
       versioned: true,
       enforceSSL: true,
@@ -132,18 +154,19 @@ export class PipelineResourcesStack extends cdk.Stack {
       serverAccessLogsPrefix: "output-bucket",
     });
 
-
-    this.outputVMImportBucket = new VMImportBucket(this, 'PipelineResourceOutputVMImportBucket', {
-      bucketName: outputVMImportBucketName,
-      versioned: true,
-      enforceSSL: true,
-      autoDeleteObjects: true,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      encryptionKey: this.encryptionKey,
-      serverAccessLogsBucket: this.accessLoggingBucket,
-      serverAccessLogsPrefix: "output-vm-import-bucket",
-    });
+    this.outputVMImportBucket = new VMImportBucket(
+      this,
+      "PipelineResourcesOutputVMImportBucket",
+      {
+        bucketName: outputVMImportBucketName,
+        versioned: true,
+        enforceSSL: true,
+        autoDeleteObjects: true,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+        encryptionKey: this.encryptionKey,
+        serverAccessLogsBucket: this.accessLoggingBucket,
+        serverAccessLogsPrefix: "output-vm-import-bucket",
+      },
+    );
   }
 }
-
-
