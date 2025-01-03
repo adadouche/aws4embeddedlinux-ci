@@ -86,7 +86,7 @@ export class EmbeddedLinuxCodePipelineStack extends cdk.Stack {
     );
     const efsFileSystem: efs.FileSystem = new efs.FileSystem(
       this,
-      `EmbeddedLinuxCodePipelineFilesystem`,
+      `EmbeddedLinuxCodePipelineFileSystem`,
       {
         vpc: props.vpc,
         allowAnonymousAccess: true,

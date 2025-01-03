@@ -90,9 +90,19 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
       "NFS Mount Port",
     );
 
-    const sstateFS = this.addFileSystem("SState", props.vpc, projectSg);
-    const dlFS = this.addFileSystem("Downloads", props.vpc, projectSg);
-    const tmpFS = this.addFileSystem("Temp", props.vpc, projectSg);
+    // const sstateFS = this.addFileSystem("SState", props.vpc, projectSg);
+    // const dlFS = this.addFileSystem("Downloads", props.vpc, projectSg);
+    // const tmpFS = this.addFileSystem("Temp", props.vpc, projectSg);
+    const efsFileSystem: efs.FileSystem = new efs.FileSystem(
+      this,
+      `EFSFileSystem`,
+      {
+        vpc: props.vpc,
+        allowAnonymousAccess: true,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      },
+    );
+    efsFileSystem.connections.allowFrom(projectSg, Port.tcp(2049));
 
     let outputBucket: s3.IBucket | VMImportBucket;
     let environmentVariables = {};
@@ -219,21 +229,28 @@ export class EmbeddedLinuxPipelineStack extends cdk.Stack {
       timeout: cdk.Duration.hours(4),
       vpc: props.vpc,
       securityGroups: [projectSg],
+      // fileSystemLocations: [
+      //   FileSystemLocation.efs({
+      //     identifier: "tmp_dir",
+      //     location: tmpFS,
+      //     mountPoint: "/nfs/build-output",
+      //   }),
+      //   FileSystemLocation.efs({
+      //     identifier: "sstate_cache",
+      //     location: sstateFS,
+      //     mountPoint: "/nfs/sstate-cache",
+      //   }),
+      //   FileSystemLocation.efs({
+      //     identifier: "dl_dir",
+      //     location: dlFS,
+      //     mountPoint: "/nfs/downloads",
+      //   }),
+      // ],      
       fileSystemLocations: [
         FileSystemLocation.efs({
-          identifier: "tmp_dir",
-          location: tmpFS,
-          mountPoint: "/build-output",
-        }),
-        FileSystemLocation.efs({
-          identifier: "sstate_cache",
-          location: sstateFS,
-          mountPoint: "/sstate-cache",
-        }),
-        FileSystemLocation.efs({
-          identifier: "dl_dir",
-          location: dlFS,
-          mountPoint: "/downloads",
+          identifier: "nfs",
+          location: `${efsFileSystem.fileSystemId}.efs.${efsFileSystem.env.region}.amazonaws.com:/`,
+          mountPoint: "/nfs",
         }),
       ],
       logging: {
