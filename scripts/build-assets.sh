@@ -24,10 +24,11 @@ done
 if [ -d $WD/dist/scripts ]; then rm -rf $WD/dist/scripts; fi 
 if [ -d $WD/dist/source-repo ]; then rm -rf $WD/dist/source-repo; fi 
 if [ -d $WD/dist/source-zip ]; then rm -rf $WD/dist/source-zip; fi 
+
 mkdir -p $WD/dist/scripts
 mkdir -p $WD/dist/source-repo
 mkdir -p $WD/dist/source-zip
 
-cp "$WD/scripts/create-ec2-ami.sh" "$WD/dist/scripts/"
+cp -r $WD/scripts $WD/dist
 cp -r $WD/source-repo $WD/dist
 cp -r $WD/source-zip $WD/dist
