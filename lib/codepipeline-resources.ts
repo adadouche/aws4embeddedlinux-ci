@@ -160,13 +160,13 @@ export class PipelineResourcesStack extends cdk.Stack {
     new cdk.CfnOutput(this, "OutputPipelineResourcesAccessLoggingBucket", {
       exportName: "accessLoggingBucket",
       value: this.accessLoggingBucket.bucketName,
-      description: "The access loggin bucket.",
+      description: "The access logging bucket.",
     });
 
     new cdk.CfnOutput(this, "OutputPipelineResourcesSourceBucket", {
       exportName: "sourceBucket",
       value: this.sourceBucket.bucketName,
-      description: "The source loggin bucket.",
+      description: "The source bucket.",
     });
 
     new cdk.CfnOutput(this, "OutputPipelineResourcesArtifactBucket", {
