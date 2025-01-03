@@ -17,6 +17,7 @@ import {
 import { IRepository } from "aws-cdk-lib/aws-ecr";
 
 import {
+  ISecurityGroup,
   IVpc,
   Peer,
   Port,
@@ -40,10 +41,22 @@ export interface EmbeddedLinuxCodebuildProjectProps extends cdk.StackProps {
   readonly imageTag?: string;
   /** VPC where the networking setup resides. */
   readonly vpc: IVpc;
+  /** The type of project being built.  */
+  readonly projectKind?: ProjectKind;
+  /** A name for the layer-repo that is created. Default is 'layer-repo' */
+  readonly layerRepoName?: string;
   /** Additional policy statements to add to the build project. */
   readonly buildPolicyAdditions?: iam.PolicyStatement[];
-  /** EFS Filesystem**/
-  readonly efsFileSystem?: efs.FileSystem;
+  /** Access logging bucket to use */
+  readonly accessLoggingBucket?: s3.Bucket;
+  /** Access logging prefix to use */
+  readonly serverAccessLogsPrefix?: string;
+  /** Artifact bucket to use */
+  readonly artifactBucket?: s3.Bucket;
+  /** Output bucket to use */
+  readonly outputBucket?: s3.Bucket | VMImportBucket;
+  /** Prefix for S3 object within bucket */
+  readonly subDirectoryName?: string;
 }
 
 /**
