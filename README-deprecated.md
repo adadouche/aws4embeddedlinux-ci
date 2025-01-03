@@ -18,7 +18,7 @@ The [API documentation](https://aws4embeddedlinux.github.io/aws4embeddedlinux-ci
 
 ## Setup
 
-The instructions remains the same as in the [README](./README.md) except for the packages / classes imports:
+The instructions remains the same as in the [README](./README.md#setup) except for the packages / classes imports:
 
 ```ts
 import {
@@ -35,16 +35,16 @@ import {
 
 ## Known issues
 
-Please refer to the [README](./README.md)
+Please refer to the [README](./README.md#known-issues)
 
 ## Security
 
-Please refer to the [README](./README.md)
+Please refer to the [README](./README.md#security)
 
 ## Contributing
 
-Please refer to the [README](./README.md)
+Please refer to the [README](./README.md#contributing)
 
 ## License
 
-Please refer to the [README](./README.md)
+Please refer to the [README](./README.md#license)
