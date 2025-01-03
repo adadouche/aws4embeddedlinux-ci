@@ -31,5 +31,3 @@ mkdir -p $WD/dist/source-zip
 cp "$WD/scripts/create-ec2-ami.sh" "$WD/dist/scripts/"
 cp -r $WD/source-repo $WD/dist
 cp -r $WD/source-zip $WD/dist
-
-
