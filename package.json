@@ -7,16 +7,16 @@
     "build": "tsc",
     "watch": "tsc -w",
     "cdk": "cdk",
-    "clean": "tsc --build --clean && rm -rf dist && rm -rf assets && rm -rf cdk.out",
+    "clean": "tsc --build --clean && rm -rf dist && rm -rf source-zip && rm -rf cdk.out",
     "doc": "typedoc --sort source-order --readme README.md",
     "format": "eslint '**/*.{js,ts,json}' --quiet --fix",
     "check": "eslint '**/*.{js,ts,json}'",
-    "copy-assets": "if [ -d dist/assets ]; then rm -rf dist/assets; fi && mkdir -p dist/assets && cp -r assets dist",
     "build-assets": "./scripts/build-assets.sh",
-    "prebuild": "npm run build-assets && npm run copy-assets",
+    "prebuild": "npm run build-assets",
     "test": "npm run prebuild && jest",
     "update-snapshot": "npm run prebuild && jest -u",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "prepare-commit": "npm run clean && npm run format && npm run build && npm run check && npm run test"
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.4",

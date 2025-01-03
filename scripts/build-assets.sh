@@ -4,19 +4,32 @@ SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 WD="$SCRIPTPATH/.."
 
-mkdir -p $WD/assets
-cp "$WD/scripts/create-ec2-ami.sh" "$WD/assets/"
+# create a source-zip where all the source-repo folders will be stored as zip
+mkdir -p $WD/source-zip
 
-declare -a source_repo=(base-image kas meta-aws-demo nxp-imx poky poky-ami renesas)
-
-for pipeline in "${source_repo[@]}"
+# loop trough the source-repo folders
+declare -a source_repos=(base-image kas meta-aws-demo nxp-imx poky poky-ami renesas)
+for pipeline in "${source_repos[@]}"
 do
-  if [ -f $WD/assets/pipeline-source-$pipeline/source-$pipeline.zip ]; then 
-    rm -rf $WD/assets/pipeline-source-$pipeline
+  if [ -f $WD/source-zip/$pipeline/source-$pipeline.zip ]; then 
+    rm -rf $WD/source-zip/$pipeline
   fi
-  mkdir -p $WD/assets/pipeline-source-$pipeline/
+  mkdir -p $WD/source-zip/$pipeline
   cd $WD/source-repo/$pipeline
-  zip -q -o $WD/assets/pipeline-source-$pipeline/source-$pipeline.zip -r *
+  # create a zip with the source repo content for the specific immage
+  zip -q -o $WD/source-zip/$pipeline/source-$pipeline.zip -r *
 done
+
+# copy the folders into th dist folder
+if [ -d $WD/dist/scripts ]; then rm -rf $WD/dist/scripts; fi 
+if [ -d $WD/dist/source-repo ]; then rm -rf $WD/dist/source-repo; fi 
+if [ -d $WD/dist/source-zip ]; then rm -rf $WD/dist/source-zip; fi 
+mkdir -p $WD/dist/scripts
+mkdir -p $WD/dist/source-repo
+mkdir -p $WD/dist/source-zip
+
+cp "$WD/scripts/create-ec2-ami.sh" "$WD/dist/scripts/"
+cp -r $WD/source-repo $WD/dist
+cp -r $WD/source-zip $WD/dist
 
 
