@@ -83,7 +83,6 @@ phases:
       # only delete empty dirs
       - find /nfs/downloads -atime +30 -type d -empty -delete
       - echo "Post build completed - [$(date '+%F %H:%M:%S')]"
-
 artifacts:
   discard-paths: true
   files:
