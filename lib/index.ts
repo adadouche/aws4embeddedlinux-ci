@@ -3,6 +3,31 @@ export * from "./codepipeline-embedded-linux-base-image";
 export * from "./codepipeline-embedded-linux";
 export * from "./codepipeline-resources";
 
+<<<<<<< HEAD
+=======
+export * from "./deprecated/network";
+export * from "./deprecated/build-image-data";
+export * from "./deprecated/build-image-repo";
+export * from "./deprecated/build-image-pipeline";
+export * from "./deprecated/embedded-linux-pipeline";
+export * from "./deprecated/embedded-linux-codebuild-project";
+export * from "./deprecated/vm-import-bucket";
+export * from "./deprecated/constructs/source-repo";
+
+export function isBucketVersioned(bucket: s3.Bucket | s3.IBucket) {
+  const bucketCfn: s3.CfnBucket = bucket.node.defaultChild as s3.CfnBucket;
+  if (
+    bucketCfn.versioningConfiguration &&
+    (
+      bucketCfn.versioningConfiguration as s3.CfnBucket.VersioningConfigurationProperty
+    ).status != "Enabled"
+  ) {
+    return true;
+  }
+  return false;
+}
+
+>>>>>>> 8089ca1 (adjusting the vmimport bucket class import)
 /**
  * The type of project built.
  */
