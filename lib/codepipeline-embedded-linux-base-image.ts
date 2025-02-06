@@ -56,6 +56,8 @@ export class EmbeddedLinuxCodePipelineBaseImageStack extends cdk.Stack {
 
     const projectType: string = "base-image";
 
+    const projectType: string = "base-image";
+
     if (!props.pipelineSourcePrefix) {
       props.pipelineSourcePrefix = `${projectType}`;
     }

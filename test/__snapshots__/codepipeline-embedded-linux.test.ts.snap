@@ -48,8 +48,23 @@ exports[`EmbeddedLinuxCodePipelineStack Snapshot 1`] = `
         ],
       },
     },
-    "BuildSource": {
-      "Description": "The source bucket key of this pipeline.",
+    "OutputURI": {
+      "Description": "The output bucket of this pipeline.",
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "s3://",
+            {
+              "Fn::ImportValue": "MyResourceStack:ExportsOutputRefPipelineResourcesOutputBucketA2144F25070A0F1C",
+            },
+            "/poky",
+          ],
+        ],
+      },
+    },
+    "SourceURI": {
+      "Description": "The source bucket uri for this pipeline.",
       "Value": {
         "Fn::Join": [
           "",
@@ -58,7 +73,7 @@ exports[`EmbeddedLinuxCodePipelineStack Snapshot 1`] = `
             {
               "Fn::ImportValue": "MyResourceStack:ExportsOutputRefPipelineResourcesSourceBucket1FA488F54AA73B60",
             },
-            "/source/poky/source-poky.zip",
+            "/poky/arbitrary-file.ext",
           ],
         ],
       },
@@ -1472,6 +1487,115 @@ exports[`EmbeddedLinuxCodePipelineStack Snapshot 1`] = `
                     [
                       {
                         "Fn::ImportValue": "test-common:ExportsOutputFnGetAtttestartF0FFB4BEArnE74A2E94",
+                      },
+                      "/*",
+                    ],
+                  ],
+                },
+              ],
+            },
+            {
+              "Action": [
+                "ec2:CreateImage",
+                "ec2:CreateTags",
+                "ec2:DescribeImages",
+                "ec2:DescribeSnapshots",
+                "ec2:DescribeImportSnapshotTasks",
+                "ec2:DescribeTags",
+                "ec2:CancelImportTask",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+            {
+              "Action": "ec2:ImportSnapshot",
+              "Effect": "Allow",
+              "Resource": [
+                "arn:aws:ec2:eu-central-1:111111111111:import-snapshot-task/*",
+                "arn:aws:ec2:eu-central-1::snapshot/*",
+              ],
+            },
+            {
+              "Action": [
+                "s3:GetObject",
+                "s3:ListBucket",
+                "s3:PutObject",
+                "s3:PutObjectTagging",
+                "s3:AbortMultipartUpload",
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::ImportValue": "MyResourceStack:ExportsOutputFnGetAttPipelineResourcesOutputBucketA2144F25ArnBAEF4928",
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::ImportValue": "MyResourceStack:ExportsOutputFnGetAttPipelineResourcesOutputBucketA2144F25ArnBAEF4928",
+                      },
+                      "/*",
+                    ],
+                  ],
+                },
+              ],
+            },
+            {
+              "Action": [
+                "ec2:RegisterImage",
+                "ec2:DeregisterImage",
+                "ec2:CreateStoreImageTask",
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                "arn:aws:ec2:eu-central-1::image/*",
+                "arn:aws:ec2:eu-central-1::snapshot/snap-*",
+              ],
+            },
+            {
+              "Action": [
+                "ebs:CompleteSnapshot",
+                "ebs:GetSnapshotBlock",
+                "ebs:ListChangedBlocks",
+                "ebs:ListSnapshotBlocks",
+                "ebs:PutSnapshotBlock",
+              ],
+              "Effect": "Allow",
+              "Resource": "arn:aws:ec2:eu-central-1::snapshot/*",
+            },
+            {
+              "Action": [
+                "ec2:DescribeStoreImageTasks",
+                "ec2:GetEbsEncryptionByDefault",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+            {
+              "Action": [
+                "s3:GetObject*",
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*",
+                "s3:PutObject",
+                "s3:PutObjectLegalHold",
+                "s3:PutObjectRetention",
+                "s3:PutObjectTagging",
+                "s3:PutObjectVersionTagging",
+                "s3:Abort*",
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::ImportValue": "MyResourceStack:ExportsOutputFnGetAttPipelineResourcesArtifactBucketFF61EB98Arn7A6F2306",
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::ImportValue": "MyResourceStack:ExportsOutputFnGetAttPipelineResourcesArtifactBucketFF61EB98Arn7A6F2306",
                       },
                       "/*",
                     ],
