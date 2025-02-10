@@ -175,7 +175,7 @@ export class EmbeddedLinuxCodePipelineStack extends cdk.Stack {
     const sourceActionOutputArtifact = new codepipeline.Artifact("Source");
     const sourceAction = new codepipeline_actions.S3SourceAction({
       actionName: "Source",
-      trigger: codepipeline_actions.S3Trigger.POLL,
+      trigger: codepipeline_actions.S3Trigger.EVENTS,
       output: sourceActionOutputArtifact,
       bucket: props.pipelineSourceBucket,
       bucketKey: `${props.pipelineSourcePrefix}/${sourceRepoAsset.s3ObjectKey}`,
