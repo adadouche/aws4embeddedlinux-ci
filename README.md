@@ -207,8 +207,7 @@ cdk init app --language typescript
 Then you will need to install the CDK library including the `aws4embeddedlinux-ci` library either using `npm`:
 
 ```bash
-yarn install
-yarn add github:aws4embeddedlinux/aws4embeddedlinux-ci
+npm install aws4embeddedlinux/aws4embeddedlinux-ci
 ```
 
 of `yarn':
