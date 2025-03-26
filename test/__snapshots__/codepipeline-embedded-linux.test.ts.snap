@@ -56,9 +56,9 @@ exports[`EmbeddedLinuxCodePipelineStack Snapshot 1`] = `
           [
             "s3://",
             {
-              "Fn::ImportValue": "MyResourceStack:ExportsOutputRefPipelineResourcesOutputBucketA2144F25070A0F1C",
+              "Fn::ImportValue": "test-common:ExportsOutputReftestoutA50725182A5BCA18",
             },
-            "/poky",
+            "/custom",
           ],
         ],
       },
@@ -71,9 +71,9 @@ exports[`EmbeddedLinuxCodePipelineStack Snapshot 1`] = `
           [
             "s3://",
             {
-              "Fn::ImportValue": "MyResourceStack:ExportsOutputRefPipelineResourcesSourceBucket1FA488F54AA73B60",
+              "Fn::ImportValue": "test-common:ExportsOutputReftestsrc6C860343FD6A5870",
             },
-            "/poky/arbitrary-file.ext",
+            "/custom/arbitrary-file.ext",
           ],
         ],
       },
@@ -1526,14 +1526,14 @@ exports[`EmbeddedLinuxCodePipelineStack Snapshot 1`] = `
               "Effect": "Allow",
               "Resource": [
                 {
-                  "Fn::ImportValue": "MyResourceStack:ExportsOutputFnGetAttPipelineResourcesOutputBucketA2144F25ArnBAEF4928",
+                  "Fn::ImportValue": "test-common:ExportsOutputFnGetAtttestoutA5072518ArnD3542377",
                 },
                 {
                   "Fn::Join": [
                     "",
                     [
                       {
-                        "Fn::ImportValue": "MyResourceStack:ExportsOutputFnGetAttPipelineResourcesOutputBucketA2144F25ArnBAEF4928",
+                        "Fn::ImportValue": "test-common:ExportsOutputFnGetAtttestoutA5072518ArnD3542377",
                       },
                       "/*",
                     ],
@@ -1588,14 +1588,14 @@ exports[`EmbeddedLinuxCodePipelineStack Snapshot 1`] = `
               "Effect": "Allow",
               "Resource": [
                 {
-                  "Fn::ImportValue": "MyResourceStack:ExportsOutputFnGetAttPipelineResourcesArtifactBucketFF61EB98Arn7A6F2306",
+                  "Fn::ImportValue": "test-common:ExportsOutputFnGetAtttestartF0FFB4BEArnE74A2E94",
                 },
                 {
                   "Fn::Join": [
                     "",
                     [
                       {
-                        "Fn::ImportValue": "MyResourceStack:ExportsOutputFnGetAttPipelineResourcesArtifactBucketFF61EB98Arn7A6F2306",
+                        "Fn::ImportValue": "test-common:ExportsOutputFnGetAtttestartF0FFB4BEArnE74A2E94",
                       },
                       "/*",
                     ],
