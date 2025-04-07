@@ -1503,7 +1503,7 @@ __metadata:
     "@typescript-eslint/parser": "npm:^8.18.0"
     aws-cdk: "npm:^2.1006.0"
     aws-cdk-lib: "npm:^2.187.0"
-    cdk-nag: "npm:^2.35.59"
+    cdk-nag: "npm:^2.35.65"
     constructs: "npm:^10.4.2"
     eslint: "npm:^9.16.0"
     eslint-config-prettier: "npm:^10.1.1"
@@ -1729,13 +1729,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cdk-nag@npm:^2.35.59":
-  version: 2.35.59
-  resolution: "cdk-nag@npm:2.35.59"
+"cdk-nag@npm:^2.35.65":
+  version: 2.35.65
+  resolution: "cdk-nag@npm:2.35.65"
   peerDependencies:
     aws-cdk-lib: ^2.156.0
     constructs: ^10.0.5
-  checksum: 10c0/601cedb01944cc9b182b2b6cc63a4c404d48311debf23dfa5877446595e306443006db568da107faa4b3ad63fddf91707a1a72f78d082bdbbf7ebac0db4b4c3a
+  checksum: 10c0/7933f0758b6190bd1c191fca568f925c681150618700469f38fc21e6b2dd0713696228ffde7c47326ccde0857920b48b695e57214ea5d182d43da7552e96f3a2
   languageName: node
   linkType: hard
 
