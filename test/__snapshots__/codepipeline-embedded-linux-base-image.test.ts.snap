@@ -43,21 +43,6 @@ exports[`EmbeddedLinuxCodePipelineBaseImageStack Snapshot 1`] = `
         ],
       },
     },
-    "SourceURI": {
-      "Description": "The source-repo bucket uri for this pipeline.",
-      "Value": {
-        "Fn::Join": [
-          "",
-          [
-            "s3://",
-            {
-              "Fn::ImportValue": "test-common:ExportsOutputReftestsrc6C860343FD6A5870",
-            },
-            "/base-image/arbitrary-file.ext",
-          ],
-        ],
-      },
-    },
   },
   "Parameters": {
     "BootstrapVersion": {
