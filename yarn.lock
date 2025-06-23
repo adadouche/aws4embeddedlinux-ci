@@ -15,10 +15,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-cdk/asset-awscli-v1@npm:^2.2.229":
-  version: 2.2.230
-  resolution: "@aws-cdk/asset-awscli-v1@npm:2.2.230"
-  checksum: 10c0/4a43bdaffaabed33f4fba2cca46dfea6dac22e8379b61f15c6d5f2560b54eb5c2b10da123c0bf328292998cd5dc1dcab69a8599a064299384e69d5f8f39afd33
+"@aws-cdk/asset-awscli-v1@npm:2.2.240":
+  version: 2.2.240
+  resolution: "@aws-cdk/asset-awscli-v1@npm:2.2.240"
+  checksum: 10c0/0e9edcfb264353531230049a8f8c0107d17b89a6e1e5118c2187e2ff73c14166cf602ca546cd88f67c72c2513898c95230753e4f3c7d7abc616eb621d928a45c
   languageName: node
   linkType: hard
 
@@ -29,13 +29,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-cdk/cloud-assembly-schema@npm:^41.0.0":
-  version: 41.2.0
-  resolution: "@aws-cdk/cloud-assembly-schema@npm:41.2.0"
+"@aws-cdk/cloud-assembly-schema@npm:^44.2.0":
+  version: 44.7.0
+  resolution: "@aws-cdk/cloud-assembly-schema@npm:44.7.0"
   dependencies:
     jsonschema: "npm:~1.4.1"
-    semver: "npm:^7.7.1"
-  checksum: 10c0/b62e580878d7f969f32a74982c6f449372538368180e017312948bd727b53f2c3e909f232b2238cac94190a12cfa098ecbdebeddf29b8119e5a794a9b1754793
+    semver: "npm:^7.7.2"
+  checksum: 10c0/5e3b0d4de35f7a9f1c3d1cad62911afcbb62bbccff04b0f59181adef1d5661db12cdb0d884966580c5f37ee35880e2fb28dc61fa8989c40c5d0cb3eb47c1a159
   languageName: node
   linkType: hard
 
@@ -1472,13 +1472,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"aws-cdk-lib@npm:^2.189.0":
-  version: 2.189.1
-  resolution: "aws-cdk-lib@npm:2.189.1"
+"aws-cdk-lib@npm:^2.202.0":
+  version: 2.202.0
+  resolution: "aws-cdk-lib@npm:2.202.0"
   dependencies:
-    "@aws-cdk/asset-awscli-v1": "npm:^2.2.229"
+    "@aws-cdk/asset-awscli-v1": "npm:2.2.240"
     "@aws-cdk/asset-node-proxy-agent-v6": "npm:^2.1.0"
-    "@aws-cdk/cloud-assembly-schema": "npm:^41.0.0"
+    "@aws-cdk/cloud-assembly-schema": "npm:^44.2.0"
     "@balena/dockerignore": "npm:^1.0.2"
     case: "npm:1.6.3"
     fs-extra: "npm:^11.3.0"
@@ -1487,12 +1487,12 @@ __metadata:
     mime-types: "npm:^2.1.35"
     minimatch: "npm:^3.1.2"
     punycode: "npm:^2.3.1"
-    semver: "npm:^7.7.1"
+    semver: "npm:^7.7.2"
     table: "npm:^6.9.0"
     yaml: "npm:1.10.2"
   peerDependencies:
     constructs: ^10.0.0
-  checksum: 10c0/6603cc1756f10e8046627c975a15a35b95ed33bd20adf97d4838b52a5e3594e604cfe89be622fbbb7ab34559ca0584c146aab452fdb6d7222dc4f1f0469665cc
+  checksum: 10c0/a9f5929d41164cea06e02f2597e0ebd54317f580c777abaa99defdc690e35d768d35286d73d2ad37f711a815a078e80ba25fd96ba05fac8ec4e691930d1a6b9e
   languageName: node
   linkType: hard
 
@@ -1522,7 +1522,7 @@ __metadata:
     "@typescript-eslint/eslint-plugin": "npm:^8.18.0"
     "@typescript-eslint/parser": "npm:^8.18.0"
     aws-cdk: "npm:^2.1006.0"
-    aws-cdk-lib: "npm:^2.189.0"
+    aws-cdk-lib: "npm:^2.202.0"
     cdk-nag: "npm:^2.35.69"
     constructs: "npm:^10.4.2"
     eslint: "npm:^9.24.0"
@@ -4204,6 +4204,15 @@ __metadata:
   bin:
     semver: bin/semver.js
   checksum: 10c0/fd603a6fb9c399c6054015433051bdbe7b99a940a8fb44b85c2b524c4004b023d7928d47cb22154f8d054ea7ee8597f586605e05b52047f048278e4ac56ae958
+  languageName: node
+  linkType: hard
+
+"semver@npm:^7.7.2":
+  version: 7.7.2
+  resolution: "semver@npm:7.7.2"
+  bin:
+    semver: bin/semver.js
+  checksum: 10c0/aca305edfbf2383c22571cb7714f48cadc7ac95371b4b52362fb8eeffdfbc0de0669368b82b2b15978f8848f01d7114da65697e56cd8c37b0dab8c58e543f9ea
   languageName: node
   linkType: hard
 
